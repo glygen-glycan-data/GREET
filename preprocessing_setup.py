@@ -1,3 +1,4 @@
+from GTExData import *
 from collections import defaultdict
 import csv, gzip, urllib.request, json, io, random
 import numpy as np
@@ -63,7 +64,7 @@ def extracting_data(extract_enzymes_tup, samples_names):
           values = list(csv.reader([line], delimiter='\t'))[0]
           row_dict = dict(zip(column_names, values))
           gene_name = row_dict.get("Description")
-          if gene_name in extract_enzymes_tup or len(non_glyco_enzymes) <= 100:
+          if gene_name in extract_enzymes_tup or len(non_glyco_enzymes) <= 1000:
             if gene_name not in extract_enzymes_tup and '.' not in gene_name:
               non_glyco_enzymes.add(gene_name)
             for tissue, samp in samples_names.items():
@@ -85,11 +86,11 @@ def setting_values_per_tissue(dataset, total_sample=False):
   for k, v_dic in dataset.items():
     for v_lis in v_dic:
       if v_lis != None:
-        for val in v_lis:
-          for tis, v in val.items():
-            tissue_set[tis] = len(v)
-            for val in v:
-              tissue_type_dict[k].append(val)
+        print(v_lis)
+        for tis, v in v_lis.items(): 
+          tissue_set[tis] = len(v)
+          for val in v:
+            tissue_type_dict[k].append(val)
 
   if total_sample == True:
     total_num_sample = 0
@@ -157,5 +158,68 @@ def creating_random_sets(gen_set, data, non_glyco):
   r_gen[21] = sample_enz_set
 
   return r_gen
+
+
+
+
+
+#genes = set(sys.argv[1:])
+#gtd = GTexData()
+#data = gtd.restrict(genes=genes,nottissue='Liver',includetissue=True)
+
+#print(data)
+
+
+def reading_csv_file_in(path):
+  temp_data = defaultdict(list)
+  data = {}
+  previous_gene = None
+  previous_tissue = None
+  with open(path, "r") as file:
+      dict_reader = csv.DictReader(file, delimiter="\t")
+      for row in dict_reader:
+        temp_data[row["Gene"]].append((row["Tissue"], float(row["Value"])))
+
+
+  for gn, tis_val in temp_data.items():
+    tissue_collection = defaultdict(list)
+    for t_v in tis_val:
+      tissue_collection[t_v[0]].append(t_v[1])
+    
+    data[gn] = tissue_collection
+
+  return data
+
+      
+
+
+def save_defaultdict_to_csv(data, filename, delimiter='\t'):
+    full_path = os.path.join("data/" + filename)
+    with open(full_path, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=delimiter)
+        head = ["Gene", "Tissue", "Value"]
+        writer.writerow(head)
+        header = list(data.keys())
+        for enz in header:
+          for t in data.get(enz):
+            for k_tis,val_lis in t.items():
+              for v in val_lis:
+                writer.writerow([enz, k_tis, v])
+
+
+
+
+try:  
+  file_path = "data/temp_data.csv"
+  assert(os.path.exists(file_path))
+  extracted_dataset = reading_csv_file_in(file_path)
+  
+except AssertionError:
+  sam_url = "https://storage.googleapis.com/adult-gtex/annotations/v8/metadata-files/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt"
+  samples_names = samples(sam_url)
+  url = "https://edwardslab.bmcb.georgetown.edu/sandboxdev/api/getEnzymeMappings.php?limiter=no_filter&val="  
+  enzymes_dict_set, total_enzymes = sandbox_url_data(url)
+  extracted_dataset, non_genes = extracting_data(total_enzymes, samples_names)
+  save_defaultdict_to_csv(extracted_dataset, "temp_data.csv")
 
 
