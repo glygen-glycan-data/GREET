@@ -1,4 +1,4 @@
-#from GTExData import *
+from GTExData import *
 from collections import defaultdict
 import csv, gzip, urllib.request, json, io, random
 import numpy as np
