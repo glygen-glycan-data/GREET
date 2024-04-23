@@ -1,40 +1,25 @@
 from app import *
 
+genes = set(sys.argv[1:])
 
-def enz_set_tissue(enz_set, violin=False, Normalized=True, Original=False, cdf=False, bx_plt=False):
-    exp_enz_tissue = Executing_Experiment()
-    exp_enz_tissue.add_enz_set(enz_set)
-    exp_enz_tissue.filtered_enz_dataset()
-    tissues_names = exp_enz_tissue.prep_dataframe()
-    if violin == True:
-        exp_enz_tissue.setup_dataframe()
-        exp_enz_tissue.exp_violin_plt()
-
-    exp_enz_tissue.set_pr_cdf_()
-    for t in tissues_names:
-        exp_enz_tissue.setup_dataframe()
-        exp_enz_tissue.adding_parameters(t)
-        exp_enz_tissue.execute_report(t)
-        exp_enz_tissue.extract_cdf_scores()
-        exp_enz_tissue.extract_pr_scores()
-        
-    
-    if Normalized == True:
-        exp_enz_tissue.exp_normalized_plt(0.9)
-    if Original == True:
-        exp_enz_tissue.exp_original_plt()
-    if cdf == True:
-        exp_enz_tissue.exp_cdf_plt()
-    if bx_plt == True:
-        exp_enz_tissue.exp_box_plt()
+precision = 0.9
+gn_set = GeneSet()
+gn_set1 = gn_set.extract_glyco_set_at('Fucp', '3', 'a', 'GlcpNAc')
+ml_score = RecallScore()
+for tissue in tissues_names:
+    glyco_enz_set1_data = EnzymeData(extracted_dataset, gn_set1)
+    glyco_enz_set1_data.add_parameters(tissue)
+    gnt = glyco_enz_set1_data.get_gen_dataset() 
+    pr_dic_scores, cdf_scores = execute_report(gnt, tissue)
+    cdf = ml_score.extract_cdf_scores(cdf_scores)
+    pr = ml_score.extract_pr_scores(pr_dic_scores)
 
 
+plots = PRplots(cdf, pr, precision, plt_show=True, plt_save=False)
+plots.normalized_plt()
+#plots.box_plt()
+#plots.cdf_plt()
+#plots.original_plt()
 
-#enz_set could be set of Enzymes:
-#enz_set format ::: ['form_name'], ['site'], ["anomer"], ['parent_form_name']
-        
-gen_set = ('Fucp', '3', 'a', 'GlcpNAc')
-ext_enz_set = enzymes_dict_set.get(gen_set)
 
-enz_set_tissue(ext_enz_set)
        

@@ -1,8 +1,45 @@
+#from GTExData import *
 from collections import defaultdict
 import csv, gzip, urllib.request, json, io, random
 import numpy as np
+import os, sys
 
 
+class GeneSet():
+    sandbox_url = "https://edwardslab.bmcb.georgetown.edu/sandboxdev/api/getEnzymeMappings.php?limiter=no_filter&val="   
+    
+    def __init__(self):      
+      self.gen_sdbox_data()
+
+    def gen_sdbox_data(self):
+      with urllib.request.urlopen(self.sandbox_url) as response:
+        json_data = response.read()
+        json_data = json_data.decode()
+        self.sandbox_data = json.loads(json_data)
+      
+      self.total_enzymes = set()
+      ext_data = self.sandbox_data["data"]
+      self.enzymes_dict_set = defaultdict(set)
+      for row in self.sandbox_data["data"]:
+        if row['species'] == 'Homo sapiens' and row['gene_name'] != None:
+          self.total_enzymes.add(row['gene_name'])
+        for e in ext_data:
+          if row['anomer'] == e['anomer'] and row['form_name'] == e['form_name'] and row['site'] == e['site']:
+            if row['species'] == "Homo sapiens" and row['gene_name'] != None:
+              self.enzymes_dict_set[(row['form_name'], row['site'], row["anomer"], row['parent_form_name'])].add(row['gene_name'])
+   
+    def get_sdbox_data(self):
+      return self.enzymes_dict_set 
+
+    def get_all_glyco_enz(self):   
+      return self.total_enzymes
+    
+    def extract_glyco_set_at(self, form_name, site, anomer, parent_name):   
+      gen_set = (form_name, site, anomer, parent_name)
+      gn_set = self.enzymes_dict_set.get(gen_set)
+
+      return  gn_set
+    
 
 
 def samples(url):
@@ -14,30 +51,6 @@ def samples(url):
             samples_names[row["SMTSD"]].append(row["SAMPID"])
 
     return samples_names
-
-
-
-def sandbox_url_data(sandbox_url):
-  with urllib.request.urlopen(sandbox_url) as response:
-    json_data = response.read()
-    json_data = json_data.decode()
-    json_data = json.loads(json_data)
-
-
-  total_enzymes = set() 
-  sandbox_data = json_data["data"]
-  ext_data = json_data["data"]
-  enzymes_dict_set = defaultdict(set)
-  for row in sandbox_data:
-    if row['gene_name'] != None:
-      total_enzymes.add(row['gene_name'])
-    for e in ext_data:
-      if row['anomer'] == e['anomer'] and row['form_name'] == e['form_name'] and row['site'] == e['site']:
-        if row['species'] == "Homo sapiens" and row['gene_name'] != None:
-          #key = re.split(r'\d+$', row['gene_name'])
-          enzymes_dict_set[(row['form_name'], row['site'], row["anomer"], row['parent_form_name'])].add(row['gene_name'])
-   
-  return enzymes_dict_set, total_enzymes
 
 
 
@@ -63,8 +76,8 @@ def extracting_data(extract_enzymes_tup, samples_names):
           values = list(csv.reader([line], delimiter='\t'))[0]
           row_dict = dict(zip(column_names, values))
           gene_name = row_dict.get("Description")
-          if gene_name in extract_enzymes_tup or len(non_glyco_enzymes) <= 100:
-            if gene_name not in extract_enzymes_tup and '.' not in gene_name:
+          if gene_name in extract_enzymes_tup or len(non_glyco_enzymes) <= 1000:
+            if gene_name not in extract_enzymes_tup:
               non_glyco_enzymes.add(gene_name)
             for tissue, samp in samples_names.items():
               tis_dict = defaultdict(list)
@@ -79,17 +92,19 @@ def extracting_data(extract_enzymes_tup, samples_names):
 
   return tissue_sets_data, non_glyco_enzymes
 
-def setting_values_per_tissue(dataset, total_sample=False):
+
+
+
+def setting_values_per_tissue(dataset, total_sample=False): 
   tissue_set = {}
   tissue_type_dict = defaultdict(list)
   for k, v_dic in dataset.items():
     for v_lis in v_dic:
       if v_lis != None:
-        for val in v_lis:
-          for tis, v in val.items():
-            tissue_set[tis] = len(v)
-            for val in v:
-              tissue_type_dict[k].append(val)
+        for tis, v in v_lis.items(): 
+          tissue_set[tis] = len(v)
+          for val in v:
+            tissue_type_dict[k].append(val)
 
   if total_sample == True:
     total_num_sample = 0
@@ -120,7 +135,6 @@ def adding_headers(tissue_dict_dataset, collapsed=False):
     return headers
   
 def assign_class(tissue_headers, tissue_name):
-  print(tissue_name)
   clas_nm = []
   for l in tissue_headers:
     if l == tissue_name:
@@ -140,22 +154,68 @@ def assign_class(tissue_headers, tissue_name):
   return clas_nm
 
 
-def creating_random_sets(gen_set, data, non_glyco):
-  sample_enz_set = data.get(gen_set)
-  enz_set = set()
-  r_gen = defaultdict(set)
-  for values in data.values():
-    for v in values:
-      if v not in sample_enz_set:
-        enz_set.add(v)
+def reading_file_in(path):
+  tis_names = set()
+  temp_data = defaultdict(list)
+  data = {}
+  with open(path, "r") as file:
+      dict_reader = csv.DictReader(file, delimiter="\t")
+      for row in dict_reader:
+        temp_data[row["Gene"]].append((row["Tissue"], float(row["Value"])))
 
-  enz_len = len(sample_enz_set)
-  for r_i in range(20):
-    get_random_enz = random.sample(list(non_glyco), enz_len)
-    r_gen[r_i + 1] = get_random_enz
 
-  r_gen[21] = sample_enz_set
+  for gn, tis_val in temp_data.items():
+    tissue_collection = defaultdict(list)
+    for t_v in tis_val:
+      tissue_collection[t_v[0]].append(t_v[1])
+      tis_names.add(t_v[0])
+    data[gn] = tissue_collection
 
-  return r_gen
+  return data, tis_names
+
+      
+def save_file_to(data, filename, delimiter='\t'):
+    tis_names = set()
+    full_path = os.path.join("data/" + filename)
+    with open(full_path, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=delimiter)
+        head = ["Gene", "Tissue", "Value"]
+        writer.writerow(head)
+        header = list(data.keys())
+        for enz in header:
+          for t in data.get(enz):
+            for k_tis,val_lis in t.items():
+              tis_names.add(k_tis)
+              for v in val_lis:
+                writer.writerow([enz, k_tis, v])
+    
+    return tis_names
+
+
+def check_for_file():
+  file_path = "data/temp_data.csv"
+  sam_url = "https://storage.googleapis.com/adult-gtex/annotations/v8/metadata-files/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt"
+  
+  if os.path.exists(file_path):
+    extracted_dataset, tissues_names = reading_file_in(file_path)
+
+  else:
+    samples_names = samples(sam_url)
+    gn_set = GeneSet()
+    total_enzymes = gn_set.get_all_glyco_enz()
+    extracted_dataset, non_genes = extracting_data(total_enzymes, samples_names)
+    tissues_names = save_file_to(extracted_dataset, "temp_data.csv")
+
+  return extracted_dataset, tissues_names
+
+
+extracted_dataset, tissues_names = check_for_file()
+
+
+#genes = set(sys.argv[1:])
+#gtd = GTexData()
+#data = gtd.restrict(genes=genes,nottissue='Liver',includetissue=True)
+
+#print(data)
 
 
