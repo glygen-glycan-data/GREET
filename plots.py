@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import re
 import numpy as np
-
+import os
 
 class Pre_Recall:
   def __init__(self, recall, precision, label=None):
@@ -76,7 +76,7 @@ class Pre_Recall:
 
 
 
-def monotonic_figure(line, plot_data_dict, pr_score=1.0):
+def monotonic_figure(line, plot_data_dict, plt_show, plt_save, pr_score=1.0):
   for m_name, v_dic in plot_data_dict.items():
     plt.figure(figsize=(10, 8), layout='tight')
     for val in v_dic:
@@ -94,15 +94,17 @@ def monotonic_figure(line, plot_data_dict, pr_score=1.0):
     plt.title(f'Precision-Recall Curve {m_name}')
     plt.grid(True)
     plt.legend(loc='best', bbox_to_anchor=(1.0, 1.0))
-    plt.show()
-    #file_name = f"Monethesitic_{line}_{m_name}"
-    #directory = f".\\plot_figures\\{gene_key[0]}\\{line}_Pr_Re Plots\\"
-    #os.makedirs(directory, exist_ok=True)
-    #plt.legend(loc='best', bbox_to_anchor=(1.0, 1.0))
-    #plt.savefig(os.path.join(directory, file_name))
+
+    if plt_show == True:
+      plt.show()
+      
+    if plt_save == True:
+      file_name = f"Monethesitic_{line}_{m_name}"
+      directory = f".\\plot_figures\\{line}_Pr_Re Plots\\"
+      os.makedirs(directory, exist_ok=True)
+      plt.savefig(os.path.join(directory, file_name))
+    
     plt.close()
-
-
 
 def tissue_figure(line, plot_data_dict, pre_recall_class,t_name):
   plt.figure(figsize=(12, 10))
@@ -210,7 +212,7 @@ def heatmap_class_report(compare_data, t_name):
   plt.close()
 
 
-def histogram(data_dict):
+def histogram(data_dict, plt_show, plt_save):
     plt.figure(figsize=(10, 6))
     for model_name, val in data_dict.items():
         sns.histplot(val, bins=35, alpha=0.7, label=model_name, element='poly')
@@ -219,28 +221,38 @@ def histogram(data_dict):
     plt.ylabel('Frequency')
     plt.legend()
     plt.tight_layout()
-    #directory = f".\\plot_figures\\{gene_key[0]}\\Histo plots\\"
-    #file_name = f"histogram"
-    #os.makedirs(directory, exist_ok=True)
-    #plt.savefig(os.path.join(directory, file_name))
+    if plt_show == True:
+      plt.show()
+      
+    if plt_save == True:
+      directory = f".\\plot_figures\\{gene_key[0]}\\Histo plots\\"
+      file_name = f"histogram"
+      os.makedirs(directory, exist_ok=True)
+      plt.savefig(os.path.join(directory, file_name))
+    
     plt.close()
 
-def box_plot(data_dict):
+def box_plot(data_dict,plt_show, plt_save):
     plt.figure(figsize=(10, 6))
     sns.boxenplot(data_dict, saturation=0.5)
     plt.title('Models Histogram  AUC')
     plt.xlabel('Tissue AUC Score')
     plt.ylabel('Frequency')
     plt.tight_layout()
-    #directory = f".\\plot_figures\\{gene_key[0]}\\Histo plots\\"
-    #file_name = f"box_plot"
-    #os.makedirs(directory, exist_ok=True)
-    #plt.savefig(os.path.join(directory, file_name))
+    if plt_show == True:
+      plt.show()
+      
+    if plt_save == True:
+      directory = f".\\plot_figures\\{gene_key[0]}\\Histo plots\\"
+      file_name = f"box_plot"
+      os.makedirs(directory, exist_ok=True)
+      plt.savefig(os.path.join(directory, file_name))
+    
     plt.close()
 
 
 
-def cdf_plot(data):
+def cdf_plot(data, plt_show, plt_save):
   plt.figure(figsize=(10, 8))
   for model_name, au_lis in data.items():
     au_lis_sorted = np.sort(au_lis)
@@ -252,11 +264,52 @@ def cdf_plot(data):
   plt.title('(CDF) of AUC Scores')
   plt.grid(True)
   plt.legend()
-  plt.show()
-    #directory = f".\\plot_figures\\{gene_key[0]}\\Histo plots\\"
-    #file_name = f"CDF"
-    #os.makedirs(directory, exist_ok=True)
-    #plt.savefig(os.path.join(directory, file_name))
-    #plt.close()
+  if plt_show == True:
+    plt.show()
+    plt.close()
+  if plt_save == True:
+    directory = f".\\plot_figures\\{gene_key[0]}\\Histo plots\\"
+    file_name = "CDF"
+    os.makedirs(directory, exist_ok=True)
+    plt.savefig(os.path.join(directory, file_name))
+  
+  plt.close()
 
 
+def z_plot(data, plt_show:bool, plt_save:bool, all_set = False, title = ""):
+  z_sc = []
+  pr_s = []
+  t_label = {}
+  for k_tis, z_pr in data.items():
+    z_sc.append(z_pr[0][0])
+    pr_s.append(z_pr[0][1])
+    t_label[z_pr[0]] = k_tis
+  plt.figure(figsize=(12, 10))
+  plt.scatter(z_sc, pr_s)
+
+
+  for x,y in zip(z_sc, pr_s):
+    if x > 4:
+      label = t_label.get((x,y))
+      plt.annotate(label, (x,y), textcoords="offset points", xytext=(0,10), ha='center')
+      if all_set == True:
+        plt.legend(k_tis)
+
+  plt.xlabel("Z-Score")
+  plt.ylabel("Recall")
+  plt.grid()
+  if title != "":
+    plt.title(title)
+  if plt_show == True:
+    plt.show()
+  if plt_save == True:
+    directory = f".\\plot_figures\\Z_plots\\"
+    if all_set == True:
+      file_name = "Combine_zscore"
+    else:
+      file_name = f"{title}"
+
+    os.makedirs(directory, exist_ok=True)
+    plt.savefig(os.path.join(directory, file_name))
+  
+  plt.close()

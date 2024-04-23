@@ -6,18 +6,11 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from scipy.stats import zscore
 import warnings
+import statistics
 
 
 # Ignore all warnings
 warnings.filterwarnings("ignore")
-
-sam_url = "https://storage.googleapis.com/adult-gtex/annotations/v8/metadata-files/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt"
-samples_names = samples(sam_url)
-
-url = "https://edwardslab.bmcb.georgetown.edu/sandboxdev/api/getEnzymeMappings.php?limiter=no_filter&val="
-enzymes_dict_set, total_enzymes = sandbox_url_data(url)
-extracted_dataset, non_genes = extracting_data(total_enzymes, samples_names)
-
 
 
 
@@ -118,6 +111,135 @@ class Executing_Experiment:
     histogram(self.collect_cdf_scores)
 
 
-
-
+def create_random_sets(gene_set, dataset, glyco_set):
+  r_gen = defaultdict(set)
+  non_glyco_set = []
+  for gn in dataset:
+    if gn not in glyco_set:
+      non_glyco_set.append(gn)
   
+  for r_i in range(20):
+    get_random_enz = random.sample(non_glyco_set, len(gene_set))
+    r_gen[r_i + 1] = get_random_enz     
+  
+  r_gen[21] = gene_set
+
+  return r_gen
+
+
+
+class EnzymeData:
+  def __init__(self, dataset, gen_set):
+    self.dataset = dataset
+    self.gen_set = gen_set
+    self.gen_dataset()
+
+  def gen_dataset(self):
+    gen_dataset = defaultdict(list)
+    for gn in self.gen_set:
+      gen_dataset[gn].append(self.dataset.get(gn)) 
+    
+    enz_dict, tissue_set = setting_values_per_tissue(gen_dataset, total_sample=True)
+    self.tissues_names = list(tissue_set.keys())
+    self.head = adding_headers(tissue_set)
+    self.df = pd.DataFrame(enz_dict, index= self.head)
+
+  def add_parameters(self, t):
+    tis_class = assign_class(self.head, t)
+    self.df.insert(loc=0, column="Class", value=tis_class)
+
+  def get_gen_dataset(self):
+    return self.df
+
+  def reset(self):
+    self.gen_dataset()   
+
+
+
+class Report:
+  def __init__(self, gn_dataset):
+    self.gn_dataset = gn_dataset
+    
+  def execute_report(self, enz_set_num, ml_names=ml_names_classi, rm_exp=False):
+    if rm_exp == True:
+      collect_pr_re_dic, collect_cdf, drop_key = gen_ml_report(self.gn_dataset, ml_names, enz_set_num, x_y_split, rm_exp)
+      self.gn_dataset = self.gn_dataset.drop(columns=[drop_key])
+      print(i, drop_key)
+      return collect_pr_re_dic, collect_cdf
+  
+    else:
+      collect_pr_re_dic, collect_cdf = gen_ml_report(self.gn_dataset, ml_names, enz_set_num, x_y_split, rm_exp)
+      return collect_pr_re_dic, collect_cdf
+
+
+class RecallScore:
+  def __init__(self):
+    self.collect_cdf_scores = defaultdict(list)
+    self.mon_pr = defaultdict(list)
+
+  def extract_pr_scores(self, pr_data):
+    for m_name, t_val in pr_data.items():
+      self.mon_pr[m_name].append(t_val)
+
+    return self.mon_pr
+  
+  def extract_cdf_scores(self, cdf_data):
+    for m_name, v_lis in cdf_data.items():
+      for au in v_lis.values():
+        self.collect_cdf_scores[m_name].append(au)
+
+    return self.collect_cdf_scores
+  
+
+class Z_Score:
+  def __init__(self, cdf_data):
+    self.cdf_scores = cdf_data
+
+  def extract_std(self):
+    for k, values in self.cdf_scores.items():
+      std_value = np.std(values)
+      #print(f"Standard Deviation {k}:", std_value)
+    
+    return std_value
+
+  def extract_zscore(self):
+    z_data = []
+    for k, values in self.cdf_scores.items():
+      u = statistics.mean(values[0:19])
+      std = np.std(values)
+      z = (values[20] - u)/std
+      if k == "Logistic Regression":
+        z_data.append((z, values[20]))
+
+    return z_data
+  
+
+
+class PRplots:
+  def __init__(self, cdf_data, pr_data, precision, plt_show, plt_save):
+    self.cdf_data = cdf_data
+    self.pr_data = pr_data
+    self.precision = precision
+    self.plt_show = plt_show
+    self.plt_save = plt_save
+
+  def box_plt(self):
+    box_plot(self.cdf_data, self.plt_show, self.plt_save)
+  
+  def normalized_plt(self):
+    monotonic_figure('Regularized', self.pr_data, self.plt_show, self.plt_save, pr_score=self.precision)
+
+  def original_plt(self):
+    monotonic_figure('Original', self.pr_data, self.plt_show, self.plt_save)
+
+  def cdf_plt(self):
+    cdf_plot(self.cdf_data, self.plt_show, self.plt_save)
+  
+  def histo_plt(self):
+    histogram(self.cdf_data, self.plt_show, self.plt_save)
+
+
+def exp_violin_plt(data):
+    v = Make_Violin(data)
+    v.prepare_violin_data()
+    v.violinplot
