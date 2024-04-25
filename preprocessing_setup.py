@@ -26,7 +26,9 @@ class GeneSet():
         for e in ext_data:
           if row['anomer'] == e['anomer'] and row['form_name'] == e['form_name'] and row['site'] == e['site']:
             if row['species'] == "Homo sapiens" and row['gene_name'] != None:
-              self.enzymes_dict_set[(row['form_name'], row['site'], row["anomer"], row['parent_form_name'])].add(row['gene_name'])
+              anomer_site = row["anomer"] + row["site"]
+              sd_group_name = f"{row['form_name']}-{anomer_site}-{row['parent_form_name']}"
+              self.enzymes_dict_set[sd_group_name].add(row['gene_name'])
    
     def get_sdbox_data(self):
       return self.enzymes_dict_set 
