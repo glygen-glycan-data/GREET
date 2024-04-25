@@ -72,7 +72,7 @@ class ML_Parameters_Model:
 
   
 
-def gen_ml_report(df, ml_dict, tissue_name, x_y_split, rm_enz_exp=False):
+def gen_ml_report(df, ml_names, tissue_name, x_y_split, rm_enz_exp=False):
   
   X_train, X_test, y_train, y_test = x_y_split(df)
 
@@ -82,7 +82,7 @@ def gen_ml_report(df, ml_dict, tissue_name, x_y_split, rm_enz_exp=False):
   collect_auc_score = {}
   collect_cdf_score = {}
   tissue_pr_re = {}
-  for model_name, model in ml_dict.items():
+  for model_name, model in ml_names.items():
     m = ML_Parameters_Model(df, model_name, model, X_train, X_test, y_train, y_test)
     pr = m.set_up()
 
