@@ -280,10 +280,19 @@ def z_plot(data, plt_show:bool, plt_save:bool, all_set = False, title = ""):
   z_sc = []
   pr_s = []
   t_label = {}
+  
   for k_tis, z_pr in data.items():
-    z_sc.append(z_pr[0][0])
-    pr_s.append(z_pr[0][1])
-    t_label[z_pr[0]] = k_tis
+    if all_set == True:
+      for gn_set, z_pr_value in z_pr.items():
+        z_sc.append(z_pr_value[0][0])
+        pr_s.append(z_pr_value[0][1])
+        t_label[z_pr_value[0]] = gn_set
+    
+    else:
+      z_sc.append(z_pr[0][0])
+      pr_s.append(z_pr[0][1])
+      t_label[z_pr[0]] = k_tis
+
   plt.figure(figsize=(12, 10))
   plt.scatter(z_sc, pr_s)
 
@@ -292,8 +301,10 @@ def z_plot(data, plt_show:bool, plt_save:bool, all_set = False, title = ""):
     if x > 4:
       label = t_label.get((x,y))
       plt.annotate(label, (x,y), textcoords="offset points", xytext=(0,10), ha='center')
-      if all_set == True:
-        plt.legend(k_tis)
+      #if all_set == True:
+      #  print(k_tis[1])
+      #  plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0))
+        
 
   plt.xlabel("Z-Score")
   plt.ylabel("Recall")
@@ -313,3 +324,21 @@ def z_plot(data, plt_show:bool, plt_save:bool, all_set = False, title = ""):
     plt.savefig(os.path.join(directory, file_name))
   
   plt.close()
+
+def z_table(data, plt_show=False, plt_save=False):
+  restricted_zlabels = {}
+  for k_tis, z_pr in data.items():
+    for gn_set, z_pr_value in z_pr.items():
+      z_x = z_pr_value[0][0]
+      recal_y = z_pr_value[0][1]
+      if z_x > 4 and recal_y > 0.5:
+        restricted_zlabels[k_tis] = [gn_set, z_x, recal_y]
+
+  restricted_zlabels = pd.DataFrame(restricted_zlabels)
+  restricted_zlabels.columns = restricted_zlabels.keys()
+  restricted_zlabels = restricted_zlabels.transpose()
+  columns = ["Tissue", "Z-Score", "Recall-Score"]
+  restricted_zlabels.columns = columns
+  print(restricted_zlabels)
+
+
