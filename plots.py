@@ -331,14 +331,15 @@ def z_table(data, plt_show=False, plt_save=False):
     for gn_set, z_pr_value in z_pr.items():
       z_x = z_pr_value[0][0]
       recal_y = z_pr_value[0][1]
-      if z_x > 4 and recal_y > 0.5:
-        restricted_zlabels[k_tis] = [gn_set, z_x, recal_y]
+      if z_x > 0:#4 and recal_y > 0.5:
+        restricted_zlabels[k_tis[0]] = [k_tis[1], gn_set, z_x, recal_y]
 
   restricted_zlabels = pd.DataFrame(restricted_zlabels)
   restricted_zlabels.columns = restricted_zlabels.keys()
   restricted_zlabels = restricted_zlabels.transpose()
-  columns = ["Tissue", "Z-Score", "Recall-Score"]
+  columns = ["Genes", "Tissue", "Z-Score", "Recall-Score"]
   restricted_zlabels.columns = columns
+  restricted_zlabels = restricted_zlabels.sort_values(by=["Tissue"])
   print(restricted_zlabels)
 
 

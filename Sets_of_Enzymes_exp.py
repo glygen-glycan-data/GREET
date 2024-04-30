@@ -5,7 +5,6 @@ from app import *
 
 
 test = extracted_dataset.get("GGTA1")
-print(test)
 #for t, d in test.items():
 #    print(t, len(d))
 
@@ -46,12 +45,19 @@ gn_set1 = gn_sets.extract_glyco_set_at('Fucp', '3', 'a', 'GlcpNAc')
 all_sets = gn_sets.get_sdbox_data()
 #set_enz_experiment("GGTA1", extracted_dataset)
 
+
 total_gr_zscore = defaultdict(list)
 
-for i, gn_group in enumerate(all_sets.values()):
+for i, (group_name, gn_group) in enumerate(all_sets.items()):
+    if i == 3:
+        break
+    gn_group_set = ""
+    for gn in gn_group:
+        gn_group_set += f"{gn} "  
+
     if list(gn_group)[0] != "GGTA1":
-        print(gn_group)
-        total_gr_zscore[(i, str(gn_group))] = set_enz_experiment(gn_group, extracted_dataset)
+        print(gn_group_set)
+        total_gr_zscore[(group_name, gn_group_set)] = set_enz_experiment(gn_group, extracted_dataset)
 
 z_plot(total_gr_zscore, all_set= True, plt_show=True, plt_save=True)
 z_table(total_gr_zscore, plt_show=True, plt_save=True)
