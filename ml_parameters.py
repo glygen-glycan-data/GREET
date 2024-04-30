@@ -14,7 +14,8 @@ from plots import *
 def x_y_split(data):
     X = data.drop(['Class'], axis = 1)
     y = np.array(data["Class"])
-    strat_split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+    strat_split = StratifiedShuffleSplit(n_splits=1, test_size=0.2)
+    #strat_split.split(X,y)[0]
     for train_index, test_index in strat_split.split(X, y):
       X_train, X_test = X.iloc[train_index], X.iloc[test_index]
       y_train, y_test = y[train_index], y[test_index]

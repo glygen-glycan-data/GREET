@@ -29,6 +29,7 @@ class GeneSet():
               anomer_site = row["anomer"] + row["site"]
               sd_group_name = f"{row['form_name']}-{anomer_site}-{row['parent_form_name']}"
               self.enzymes_dict_set[sd_group_name].add(row['gene_name'])
+              
    
     def get_sdbox_data(self):
       return self.enzymes_dict_set 
