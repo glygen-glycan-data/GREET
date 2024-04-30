@@ -26,7 +26,9 @@ class GeneSet():
         for e in ext_data:
           if row['anomer'] == e['anomer'] and row['form_name'] == e['form_name'] and row['site'] == e['site']:
             if row['species'] == "Homo sapiens" and row['gene_name'] != None:
-              self.enzymes_dict_set[(row['form_name'], row['site'], row["anomer"], row['parent_form_name'])].add(row['gene_name'])
+              anomer_site = row["anomer"] + row["site"]
+              sd_group_name = f"{row['form_name']}-{anomer_site}-{row['parent_form_name']}"
+              self.enzymes_dict_set[sd_group_name].add(row['gene_name'])
    
     def get_sdbox_data(self):
       return self.enzymes_dict_set 
@@ -101,10 +103,17 @@ def setting_values_per_tissue(dataset, total_sample=False):
   for k, v_dic in dataset.items():
     for v_lis in v_dic:
       if v_lis != None:
-        for tis, v in v_lis.items(): 
-          tissue_set[tis] = len(v)
-          for val in v:
-            tissue_type_dict[k].append(val)
+        if isinstance(v_lis, list):
+          for val in v_lis:  
+            for tis, values in val.items():
+              tissue_set[tis] = len(values)
+              for v in values:
+                tissue_type_dict[k].append(v)
+        else:
+          for tis, values in v_lis.items():
+            tissue_set[tis] = len(values)
+            for v in values:
+              tissue_type_dict[k].append(v)
 
   if total_sample == True:
     total_num_sample = 0
@@ -162,16 +171,21 @@ def reading_file_in(path):
       dict_reader = csv.DictReader(file, delimiter="\t")
       for row in dict_reader:
         temp_data[row["Gene"]].append((row["Tissue"], float(row["Value"])))
-
-
   for gn, tis_val in temp_data.items():
     tissue_collection = defaultdict(list)
     for t_v in tis_val:
       tissue_collection[t_v[0]].append(t_v[1])
       tis_names.add(t_v[0])
-    data[gn] = tissue_collection
+    
+    
+    total_num_sample = 0
+    for values in tissue_collection.values():
+      total_num_sample += len(values)
 
-  return data, tis_names
+    if total_num_sample == 17382:
+      data[gn] = tissue_collection
+  
+  return data, sorted(tis_names)
 
       
 def save_file_to(data, filename, delimiter='\t'):
@@ -189,7 +203,7 @@ def save_file_to(data, filename, delimiter='\t'):
               for v in val_lis:
                 writer.writerow([enz, k_tis, v])
     
-    return tis_names
+    return sorted(tis_names)
 
 
 def check_for_file():
