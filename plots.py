@@ -3,7 +3,7 @@ from sklearn.metrics import confusion_matrix
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import re
+import re, csv
 import numpy as np
 import os
 
@@ -276,17 +276,24 @@ def cdf_plot(data, plt_show, plt_save):
   plt.close()
 
 
-def z_plot(data, plt_show:bool, plt_save:bool, all_set = False, title = ""):
+def z_plot(data, plt_show:bool, plt_save:bool, z_process=False, all_set = False, title = ""):
   z_sc = []
   pr_s = []
   t_label = {}
   
   for k_tis, z_pr in data.items():
     if all_set == True:
-      for gn_set, z_pr_value in z_pr.items():
-        z_sc.append(z_pr_value[0][0])
-        pr_s.append(z_pr_value[0][1])
-        t_label[z_pr_value[0]] = gn_set
+      if z_process == True:
+        for l in z_pr:
+          for tissue, z_pr_value in l.items():
+            z_sc.append(z_pr_value[0])
+            pr_s.append(z_pr_value[1])
+            t_label[z_pr_value] = tissue
+      else:
+        for gn_set, z_pr_value in z_pr.items():
+          z_sc.append(z_pr_value[0][0])
+          pr_s.append(z_pr_value[0][1])
+          t_label[z_pr_value[0]] = gn_set
     
     else:
       z_sc.append(z_pr[0][0])
@@ -296,14 +303,16 @@ def z_plot(data, plt_show:bool, plt_save:bool, all_set = False, title = ""):
   plt.figure(figsize=(12, 10))
   plt.scatter(z_sc, pr_s)
 
-
   for x,y in zip(z_sc, pr_s):
-    if x > 4:
+    if x > 4 and y > 0.5:
       label = t_label.get((x,y))
       plt.annotate(label, (x,y), textcoords="offset points", xytext=(0,10), ha='center')
       #if all_set == True:
       #  print(k_tis[1])
       #  plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0))
+    elif x == 5:
+      label = t_label.get((x,y))
+      plt.annotate((label, "5"), (x,y), textcoords="offset points", xytext=(0,10), ha='center')
         
 
   plt.xlabel("Z-Score")
@@ -325,14 +334,22 @@ def z_plot(data, plt_show:bool, plt_save:bool, all_set = False, title = ""):
   
   plt.close()
 
-def z_table(data, plt_show=False, plt_save=False):
+def z_table(data, z_processing=True, plt_show=False, plt_save=False):
   restricted_zlabels = {}
   for k_tis, z_pr in data.items():
-    for gn_set, z_pr_value in z_pr.items():
-      z_x = z_pr_value[0][0]
-      recal_y = z_pr_value[0][1]
-      if z_x > 0:#4 and recal_y > 0.5:
-        restricted_zlabels[k_tis[0]] = [k_tis[1], gn_set, z_x, recal_y]
+    if z_processing == True:
+      for l in z_pr:
+        for tissue, z_pr_value in l.items():
+          z_x = z_pr_value[0]
+          recal_y = z_pr_value[1]
+          if z_x > 4 and recal_y > 0.5:
+            restricted_zlabels[k_tis[0]] = [k_tis[1], tissue, z_x, recal_y]
+    else:
+      for tissue, z_pr_value in z_pr.items():
+        z_x = z_pr_value[0][0]
+        recal_y = z_pr_value[0][1]
+        if z_x > 0:#4 and recal_y > 0.5:
+          restricted_zlabels[k_tis[0]] = [k_tis[1], tissue, z_x, recal_y]
 
   restricted_zlabels = pd.DataFrame(restricted_zlabels)
   restricted_zlabels.columns = restricted_zlabels.keys()
@@ -343,3 +360,41 @@ def z_table(data, plt_show=False, plt_save=False):
   print(restricted_zlabels)
 
 
+def save_zdata(data,exp_num,  delimiter='\t'):
+  filename = f"z_table_csv_{exp_num}.tsv"
+  full_path = os.path.join("data/" + filename)
+  with open(full_path, 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile, delimiter=delimiter)
+    head = ["Group Name", "Gene", "Tissue", "Z Score", "Recall"]
+    writer.writerow(head)
+    for k_tis, z_pr in data.items():
+      for tissue, z_pr_value in z_pr.items():
+        z_x = z_pr_value[0][0]
+        recal_y = z_pr_value[0][1]
+        writer.writerow([k_tis[0], k_tis[1], tissue, z_x, recal_y])
+
+def combine_zdata_plots(data1, data2):
+  plt.figure(figsize=(12, 10))
+  z_sc = []
+  pr_s = []
+  t_label = {}
+  for gn_set, z_pr in data1.items():  
+    for gn_set, z_pr_value in z_pr.items():
+      z_sc.append(z_pr_value[0][0])
+      pr_s.append(z_pr_value[0][1])
+      t_label[z_pr_value[0]] = gn_set
+
+  plt.scatter(z_sc, pr_s, color="Red")
+
+  z_sc = []
+  pr_s = []
+  t_label = {}
+  for gn_set, z_pr in data2.items():
+      for l in z_pr:
+        for tissue, z_pr_value in l.items():
+          z_sc.append(z_pr_value[0])
+          pr_s.append(z_pr_value[1])
+          t_label[z_pr_value] = tissue
+  
+  plt.scatter(z_sc, pr_s, color="Blue")
+        
