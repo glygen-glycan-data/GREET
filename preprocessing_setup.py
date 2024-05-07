@@ -32,7 +32,11 @@ class GeneSet():
               
    
     def get_sdbox_data(self):
-      return self.enzymes_dict_set 
+      sdbox_data = {}
+      for k, gen_set in self.enzymes_dict_set.items():
+        sdbox_data[tuple(gen_set)] = k 
+      
+      return sdbox_data
 
     def get_all_glyco_enz(self):   
       return self.total_enzymes
@@ -79,7 +83,7 @@ def extracting_data(extract_enzymes_tup, samples_names):
           values = list(csv.reader([line], delimiter='\t'))[0]
           row_dict = dict(zip(column_names, values))
           gene_name = row_dict.get("Description")
-          if gene_name in extract_enzymes_tup or len(non_glyco_enzymes) <= 1000:
+          if gene_name in extract_enzymes_tup or len(non_glyco_enzymes) <= 5000:
             if gene_name not in extract_enzymes_tup:
               non_glyco_enzymes.add(gene_name)
             for tissue, samp in samples_names.items():

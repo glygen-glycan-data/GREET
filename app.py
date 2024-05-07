@@ -4,9 +4,9 @@ from preprocessing_setup import *
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-from scipy.stats import zscore
+from scipy import stats
 import warnings
-import statistics
+import statistics, math
 
 
 # Ignore all warnings
@@ -110,7 +110,7 @@ class RecallScore:
     return self.collect_cdf_scores
   
 
-class Z_Score:
+class Scores:
   def __init__(self, cdf_data):
     self.cdf_scores = cdf_data
 
@@ -132,6 +132,19 @@ class Z_Score:
 
     return z_data
   
+  def extract_tscore(self):
+    t_data = []
+    for k, values in self.cdf_scores.items():
+      u = statistics.mean(values[0:19])
+      std = np.std(values)
+      n = 20
+      se = std/ math.sqrt(n)
+      t = (u - values[20])/se
+      if k == "Logistic Regression":
+        t_data.append((t, values[20]))
+
+
+    return t_data
 
 
 class PRplots:

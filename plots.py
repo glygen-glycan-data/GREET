@@ -335,7 +335,8 @@ def z_plot(data, plt_show:bool, plt_save:bool, z_process=False, all_set = False,
   plt.close()
 
 def z_table(data, z_processing=True, plt_show=False, plt_save=False):
-  restricted_zlabels = {}
+  restricted_zlabels = defaultdict(list)
+  i = 1
   for k_tis, z_pr in data.items():
     if z_processing == True:
       for l in z_pr:
@@ -343,14 +344,19 @@ def z_table(data, z_processing=True, plt_show=False, plt_save=False):
           z_x = z_pr_value[0]
           recal_y = z_pr_value[1]
           if z_x > 4 and recal_y > 0.5:
-            restricted_zlabels[k_tis[0]] = [k_tis[1], tissue, z_x, recal_y]
+            if (k_tis[0], i) in restricted_zlabels.keys():
+              i += 1 
+            else:
+              i = 1  
+            
+            restricted_zlabels[k_tis[0], i] = [k_tis[1], tissue, z_x, recal_y]
     else:
       for tissue, z_pr_value in z_pr.items():
         z_x = z_pr_value[0][0]
         recal_y = z_pr_value[0][1]
-        if z_x > 0:#4 and recal_y > 0.5:
+        if z_x > 4 and recal_y > 0.5:
           restricted_zlabels[k_tis[0]] = [k_tis[1], tissue, z_x, recal_y]
-
+  
   restricted_zlabels = pd.DataFrame(restricted_zlabels)
   restricted_zlabels.columns = restricted_zlabels.keys()
   restricted_zlabels = restricted_zlabels.transpose()
@@ -358,6 +364,7 @@ def z_table(data, z_processing=True, plt_show=False, plt_save=False):
   restricted_zlabels.columns = columns
   restricted_zlabels = restricted_zlabels.sort_values(by=["Tissue"])
   print(restricted_zlabels)
+  
 
 
 def save_zdata(data,exp_num,  delimiter='\t'):
@@ -397,4 +404,4 @@ def combine_zdata_plots(data1, data2):
           t_label[z_pr_value] = tissue
   
   plt.scatter(z_sc, pr_s, color="Blue")
-        
+  
