@@ -1,6 +1,6 @@
 from app import *
-from multiprocessing import Process
 import time
+
 
 #enz_set format or could be full sets of Enzymes:
 #['form_name'], ['site'], ["anomer"], ['parent_form_name']
@@ -23,7 +23,7 @@ def set_enz_experiment(gene_set, all_enzymes, dataset):
     cr = create_random_sets(gene_set, dataset, all_enzymes)
     precision = 0.9
     col_zscore = {}
-    for tissue in list(tissues_names)[0:5]:
+    for tissue in tissues_names:
         start_time = time.time()
         ml_score = RecallScore()
         for rand_num, ext_enz_set in cr.items():
@@ -36,9 +36,10 @@ def set_enz_experiment(gene_set, all_enzymes, dataset):
             cdf = ml_score.extract_cdf_scores(cdf_scores)
             pr = ml_score.extract_pr_scores(pr_dic_scores)
             
-        zsc = Z_Score(cdf)
-        col_zscore[tissue] = zsc.extract_zscore()
-    
+        sc = Scores(cdf)
+        col_zscore[tissue] = sc.extract_zscore()
+        print(sc.extract_tscore())
+
 
         #plots = PRplots(cdf, pr, precision, plt_show=False, plt_save=False)
         #plots.normalized_plt()
@@ -48,7 +49,7 @@ def set_enz_experiment(gene_set, all_enzymes, dataset):
         #print_process(tissue, start_time)
         
     
-    z_plot(col_zscore, plt_show=False, plt_save=False, title=gene_set)
+    #z_plot(col_zscore, plt_show=False, plt_save=False, title=gene_set)
     print_process("Whole Set", over_all_start)
     return col_zscore
 
@@ -56,29 +57,30 @@ def set_enz_experiment(gene_set, all_enzymes, dataset):
 #set_enz_experiment("GGTA1", extracted_dataset)
 
 
-def testing_processes():
-    gn_sets = GeneSet()
-    #gn_set1 = gn_sets.extract_glyco_set_at('Fucp', '3', 'a', 'GlcpNAc')  
-    all_sets = gn_sets.get_sdbox_data() 
-    total_gr_zscore = defaultdict(list)
-    for i, (group_name, gn_group) in enumerate(all_sets.items()):
-        if i == 1:
-            break
-        gn_group_set = ""
-        for gn in gn_group:
-            gn_group_set += f"{gn} "  
 
-        if list(gn_group)[0] != "GGTA1":
-            print(gn_group_set)
-            total_gr_zscore[(group_name, gn_group_set)] = set_enz_experiment(gn_group, all_sets, extracted_dataset)
+gn_sets = GeneSet()
+#gn_set1 = gn_sets.extract_glyco_set_at('Fucp', '3', 'a', 'GlcpNAc')  
+all_sets = gn_sets.get_sdbox_data()
+glyco_enzymes = gn_sets.get_all_glyco_enz() 
+total_gr_zscore = defaultdict(list)
+for i, (gn_group, group_name) in enumerate(all_sets.items()):
+    if i == 1:
+        break
+    gn_group_set = ""
+    for gn in gn_group:
+        gn_group_set += f"{gn} "  
 
-    z_plot(total_gr_zscore, all_set= True, plt_show=True, plt_save=True)
-    z_table(total_gr_zscore, plt_show=True, plt_save=True)
-    save_zdata(total_gr_zscore, 3)
+    if list(gn_group)[0] != "GGTA1":
+        print(gn_group_set)
+        total_gr_zscore[(group_name, gn_group_set)] = set_enz_experiment(gn_group, glyco_enzymes, extracted_dataset)
 
 
 
-if __name__ == "__main__":
-   process_list = [Process(target=testing_processes) for _ in range(0, 1)]
-   [process.start() for process in process_list]
-   [process.join() for process in process_list]
+save_zdata(total_gr_zscore, 3)
+
+
+
+
+
+
+
