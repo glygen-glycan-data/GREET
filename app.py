@@ -15,11 +15,11 @@ warnings.filterwarnings("ignore")
 
 
 
-names = ["Logistic Regression", 'Modified LR L1', "KNN"] # 'QDA']
+names = ["Logistic Regression"]#,  'Modified LR L1', "KNN"] # 'QDA']
 classifiers = [
-    LogisticRegression(max_iter=50000),
-    LogisticRegression(penalty='l1', solver='liblinear', max_iter=50000),
-    KNeighborsClassifier()]
+    LogisticRegression(max_iter=50000)]
+    #LogisticRegression(penalty='l1', solver='liblinear', max_iter=50000),
+   # KNeighborsClassifier()]
    # QuadraticDiscriminantAnalysis()]
 
 ml_names_classi = {}
@@ -122,28 +122,29 @@ class Scores:
     return std_value
 
   def extract_zscore(self):
-    z_data = []
+    z_data = defaultdict(list)
     for k, values in self.cdf_scores.items():
       u = statistics.mean(values[:-1])
       std = np.std(values[:-1])
-      z = (values[-1] - u)/std
-      if std = 0:
+      if std == 0:
         z = 5
-      if k == "Logistic Regression":
-        z_data.append((z, values[-1]))
+      else:
+        z = (values[-1] - u)/std
+     
+      z_data[k].append((z, values[-1], std, u, values[:-1]))
 
     return z_data
   
   def extract_tscore(self):
-    t_data = []
+    t_data = defaultdict(list)
     for k, values in self.cdf_scores.items():
       u = statistics.mean(values[:-1])
       std = np.std(values[:-1])
       n = 20
       se = std/ math.sqrt(n)
       t = (values[-1] - u)/se
-      if k == "Logistic Regression":
-        t_data.append((t, values[-1]))
+      
+      t_data[k].append((t, values[-1]))
 
 
     return t_data

@@ -372,13 +372,17 @@ def save_zdata(data,exp_num,  delimiter='\t'):
   full_path = os.path.join("data/" + filename)
   with open(full_path, 'w', newline='') as csvfile:
     writer = csv.writer(csvfile, delimiter=delimiter)
-    head = ["Group Name", "Gene", "Tissue", "Z Score", "Recall"]
+    head = ["Group Name", "Gene", "Tissue", "Z Score", "Real Set Recall", "SD", "Mean"] + [f"Set {i + 1}" for i in range(20)]
     writer.writerow(head)
     for k_tis, z_pr in data.items():
       for tissue, z_pr_value in z_pr.items():
-        z_x = z_pr_value[0][0]
-        recal_y = z_pr_value[0][1]
-        writer.writerow([k_tis[0], k_tis[1], tissue, z_x, recal_y])
+        for values in z_pr_value.values():
+          z_x = values[0][0]
+          recal_y = values[0][1]
+          std = values[0][2]
+          mean = values[0][3]
+          other_recall = values[0][4]
+          writer.writerow([k_tis[0], k_tis[1], tissue, z_x, recal_y, std, mean] + [value for value in other_recall])
 
 def combine_zdata_plots(data1, data2):
   plt.figure(figsize=(12, 10))

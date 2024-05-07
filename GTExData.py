@@ -75,7 +75,7 @@ class GTexData:
         h.close()
         toc("Read data I/O")
         tic()
-        df = pd.DataFrame(data=data);
+        df = pd.DataFrame(data=data)
         toc("make data-frame")
         tic()
         df.set_index('Sample',inplace=True)

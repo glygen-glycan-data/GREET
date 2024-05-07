@@ -21,6 +21,7 @@ test = extracted_dataset.get("GGTA1")
 def set_enz_experiment(gene_set, all_enzymes, dataset):     
     over_all_start = time.time()
     cr = create_random_sets(gene_set, dataset, all_enzymes)
+    print(cr)
     precision = 0.9
     col_zscore = {}
     for tissue in tissues_names:
@@ -38,7 +39,6 @@ def set_enz_experiment(gene_set, all_enzymes, dataset):
             
         sc = Scores(cdf)
         col_zscore[tissue] = sc.extract_zscore()
-        print(sc.extract_tscore())
 
 
         #plots = PRplots(cdf, pr, precision, plt_show=False, plt_save=False)
@@ -64,8 +64,6 @@ all_sets = gn_sets.get_sdbox_data()
 glyco_enzymes = gn_sets.get_all_glyco_enz() 
 total_gr_zscore = defaultdict(list)
 for i, (gn_group, group_name) in enumerate(all_sets.items()):
-    if i == 1:
-        break
     gn_group_set = ""
     for gn in gn_group:
         gn_group_set += f"{gn} "  
