@@ -124,24 +124,26 @@ class Scores:
   def extract_zscore(self):
     z_data = []
     for k, values in self.cdf_scores.items():
-      u = statistics.mean(values[0:19])
-      std = np.std(values)
-      z = (values[20] - u)/std
+      u = statistics.mean(values[:-1])
+      std = np.std(values[:-1])
+      z = (values[-1] - u)/std
+      if std = 0:
+        z = 5
       if k == "Logistic Regression":
-        z_data.append((z, values[20]))
+        z_data.append((z, values[-1]))
 
     return z_data
   
   def extract_tscore(self):
     t_data = []
     for k, values in self.cdf_scores.items():
-      u = statistics.mean(values[0:19])
-      std = np.std(values)
+      u = statistics.mean(values[:-1])
+      std = np.std(values[:-1])
       n = 20
       se = std/ math.sqrt(n)
-      t = (u - values[20])/se
+      t = (values[-1] - u)/se
       if k == "Logistic Regression":
-        t_data.append((t, values[20]))
+        t_data.append((t, values[-1]))
 
 
     return t_data
