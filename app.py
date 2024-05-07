@@ -139,7 +139,7 @@ class Scores:
       std = np.std(values)
       n = 20
       se = std/ math.sqrt(n)
-      t = (u - values[21])/se
+      t = (u - values[20])/se
       if k == "Logistic Regression":
         t_data.append((t, values[20]))
 
