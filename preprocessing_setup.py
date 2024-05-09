@@ -180,13 +180,21 @@ def reading_file_in(path):
     tissue_collection = defaultdict(list)
     for t_v in tis_val:
       tissue_collection[t_v[0]].append(t_v[1])
-      tis_names.add(t_v[0])
-    
-    
+  
+  
     total_num_sample = 0
-    for values in tissue_collection.values():
-      total_num_sample += len(values)
+    reduced_tissue_collection = {}
+    for tissue, values in tissue_collection.items():
+      if len(values) >= 100:
+        reduced_tissue_collection[tissue] = values
+        print(tissue, len(values))
+        tis_names.add(tissue)
+        total_num_sample += len(values)
+      else:
+        print(tissue, len(values))
 
+    print(len(tis_names))
+    print(total_num_sample)
     if total_num_sample == 17382:
       data[gn] = tissue_collection
   

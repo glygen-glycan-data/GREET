@@ -80,7 +80,6 @@ class Report:
     self.gn_dataset = gn_dataset
     
   def execute_report(self, enz_set_num, ml_names, rm_exp=False):
-    print((self.gn_dataset.columns))
     if rm_exp == True:
       collect_pr_re_dic, collect_cdf, drop_key = gen_ml_report(self.gn_dataset, ml_names, enz_set_num, x_y_split, rm_enz_exp=rm_exp)
       self.gn_dataset = self.gn_dataset.drop(columns=[drop_key])
