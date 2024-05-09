@@ -12,7 +12,7 @@ for tissue in tissues_names:
     glyco_enz_set1_data.add_parameters(tissue)
     gnt = glyco_enz_set1_data.get_gen_dataset() 
     re = Report(gnt)
-    pr_dic_scores, cdf_scores = re.execute_report(tissue)
+    pr_dic_scores, cdf_scores = re.execute_report(tissue, ml_names_classi)
     cdf = ml_score.extract_cdf_scores(cdf_scores)
     pr = ml_score.extract_pr_scores(pr_dic_scores)
 

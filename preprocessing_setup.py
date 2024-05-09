@@ -2,7 +2,7 @@ from GTExData import *
 from collections import defaultdict
 import csv, gzip, urllib.request, json, io, random
 import numpy as np
-import os, sys
+import os, sys, re
 
 
 class GeneSet():
@@ -34,19 +34,19 @@ class GeneSet():
     def get_sdbox_data(self):
       sdbox_data = {}
       for k, gen_set in self.enzymes_dict_set.items():
-        sdbox_data[tuple(gen_set)] = k 
+        sdbox_data[tuple(sorted(gen_set))] = k 
       
       return sdbox_data
 
     def get_all_glyco_enz(self):   
       return self.total_enzymes
     
-    def extract_glyco_set_at(self, form_name, site, anomer, parent_name):   
-      gen_set = (form_name, site, anomer, parent_name)
-      gn_set = self.enzymes_dict_set.get(gen_set)
-
-      return  gn_set
+    def extract_glyco_set_at(self, group_name):   
+      group_df = self.enzymes_dict_set.get(group_name)
+      return  group_df
     
+x = GeneSet()
+x.get_sdbox_data()
 
 
 def samples(url):

@@ -79,15 +79,16 @@ class Report:
   def __init__(self, gn_dataset):
     self.gn_dataset = gn_dataset
     
-  def execute_report(self, enz_set_num, ml_names=ml_names_classi, rm_exp=False):
+  def execute_report(self, enz_set_num, ml_names, rm_exp=False):
+    print((self.gn_dataset.columns))
     if rm_exp == True:
-      collect_pr_re_dic, collect_cdf, drop_key = gen_ml_report(self.gn_dataset, ml_names, enz_set_num, x_y_split, rm_exp)
+      collect_pr_re_dic, collect_cdf, drop_key = gen_ml_report(self.gn_dataset, ml_names, enz_set_num, x_y_split, rm_enz_exp=rm_exp)
       self.gn_dataset = self.gn_dataset.drop(columns=[drop_key])
-      print(i, drop_key)
+      print(enz_set_num, drop_key)
       return collect_pr_re_dic, collect_cdf
   
     else:
-      collect_pr_re_dic, collect_cdf = gen_ml_report(self.gn_dataset, ml_names, enz_set_num, x_y_split, rm_exp)
+      collect_pr_re_dic, collect_cdf = gen_ml_report(self.gn_dataset, ml_names, enz_set_num, x_y_split, rm_enz_exp=rm_exp)
       return collect_pr_re_dic, collect_cdf
 
 

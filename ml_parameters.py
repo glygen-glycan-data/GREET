@@ -102,12 +102,11 @@ def gen_ml_report(df, ml_names, tissue_name, x_y_split, rm_enz_exp=False):
     tissue_pr_re[model_name] = [recall, precision]
 
     if rm_enz_exp == True:
-      if 'M' in model_name:
-        feat_weight = m.coef()
-        srt = dict(sorted(feat_weight.items(), key=lambda x:abs(x[1])))
-        drop_key = list(srt.keys())[0]
-        print(srt.keys())
-        print(srt.values())
+      feat_weight = m.coef()
+      srt = dict(sorted(feat_weight.items(), key=lambda x:abs(x[1])))
+      drop_key = list(srt.keys())[0]
+      print(srt.keys())
+      print(srt.values())
 
 
   #heatmap_class_report(classification_data, tissue_name)

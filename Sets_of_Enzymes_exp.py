@@ -33,7 +33,7 @@ def set_enz_experiment(gene_set, all_enzymes, dataset):
             gnt = glyco_enz_set_data.get_gen_dataset() 
             glyco_enz_set_data.reset() 
             re = Report(gnt)
-            pr_dic_scores, cdf_scores = re.execute_report(rand_num)
+            pr_dic_scores, cdf_scores = re.execute_report(rand_num, ml_names_classi)
             cdf = ml_score.extract_cdf_scores(cdf_scores)
             pr = ml_score.extract_pr_scores(pr_dic_scores)
             
@@ -63,6 +63,8 @@ gn_sets = GeneSet()
 all_sets = gn_sets.get_sdbox_data()
 glyco_enzymes = gn_sets.get_all_glyco_enz() 
 total_gr_zscore = defaultdict(list)
+
+
 for i, (gn_group, group_name) in enumerate(all_sets.items()):
     gn_group_set = ""
     for gn in gn_group:
