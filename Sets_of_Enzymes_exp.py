@@ -75,7 +75,7 @@ for i, (gn_group, group_name) in enumerate(all_sets.items()):
 
 
 
-save_zdata(total_gr_zscore, 7)
+save_zdata(total_gr_zscore, 4)
 
 
 

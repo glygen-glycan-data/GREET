@@ -5,7 +5,7 @@ def rm_per_gene(gn_group):
     ml_score = RecallScore()
     precision=0.9
     for tissue in tissues_names:
-        if tissue != "Cells - Cultured fibroblasts":
+        if tissue != "Lung":
             continue
         print(tissue)
         glyco_enz_set1_data = EnzymeData(extracted_dataset, gn_group)
@@ -27,7 +27,7 @@ def rm_per_gene(gn_group):
 
 gn_sets = GeneSet()
 all_sets = gn_sets.get_sdbox_data()
-gn_set1 = gn_sets.extract_glyco_set_at("GlcpNAc-b3-Fucx")
+gn_set1 = gn_sets.extract_glyco_set_at("GalxNAc-x0-None")
 rm_per_gene(gn_set1)
 
 

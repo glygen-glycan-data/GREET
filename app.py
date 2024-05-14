@@ -127,9 +127,9 @@ class Scores:
       u = statistics.mean(values[:-1])
       std = np.std(values[:-1])
       old_std = ""
-      if std <= 0.05:
+      if std <= 0.1:
         old_std = std
-        std = 0.05
+        std = 0.1
       
       z = (values[-1] - u)/std
       z_data[k].append((z, values[-1], u, std, old_std, values[:-1]))

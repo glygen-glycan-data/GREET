@@ -137,9 +137,9 @@ def extracting_data(extract_enzymes_tup, samples_names):
           row_dict = dict(zip(column_names, values))
           gene_name = row_dict.get("Description")
           en_id  = row_dict.get("Name")
-          if gene_name in extract_enzymes_tup or len(non_glyco_enzymes) <= 5000:
-            if gene_name not in extract_enzymes_tup:
-              non_glyco_enzymes.add(gene_name)
+          if gene_name in extract_enzymes_tup:# or len(non_glyco_enzymes) <= 5000:
+            #if gene_name not in extract_enzymes_tup:
+            #  non_glyco_enzymes.add(gene_name)
             for tissue, samp in samples_names.items():
               tis_dict = defaultdict(list)
               for s in samp:
