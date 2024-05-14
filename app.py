@@ -178,7 +178,7 @@ class PRplots:
 def exp_violin_plt(data):
     v = Make_Violin(data)
     v.prepare_violin_data()
-    v.violinplot
+    v.violinplot()
 
 
 
