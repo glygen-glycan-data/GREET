@@ -45,8 +45,64 @@ class GeneSet():
       group_df = self.enzymes_dict_set.get(group_name)
       return  group_df
     
-x = GeneSet()
-x.get_sdbox_data()
+
+
+class FileStatus:
+  def __init__(self,filename):
+    self.path = filename
+    self.tis_names = set()
+    self.read_file()
+
+  def read_file(self):
+    self.temp_data = defaultdict(list)
+    with open(self.path, "r") as file:
+      dict_reader = csv.DictReader(file, delimiter="\t")
+      for row in dict_reader:
+          self.temp_data[row["Gene"]].append((row["Tissue"], float(row["Value"])))
+
+  def save_file_to(self, dataset, delimiter='\t'):
+    with open(self.path, 'w', newline='') as csvfile:
+      writer = csv.writer(csvfile, delimiter=delimiter)
+      head = ["Gene", "Tissue", "Value"]
+      writer.writerow(head)
+      header = list(dataset.keys())
+      for enz in header:
+        for t in dataset.get(enz):
+          for k_tis,val_lis in t.items():
+            self.tis_names.add(k_tis)
+            for v in val_lis:
+              writer.writerow([enz, k_tis, v])
+    
+    return sorted(self.tis_names)
+
+  def extract_file_data(self):
+    data = {}
+    for gn, tis_val in self.temp_data.items():
+      tissue_collection = defaultdict(list)
+      for t_v in tis_val:
+        tissue_collection[t_v[0]].append(t_v[1])
+
+
+      total_num_sample = 0
+      for tissue, values in tissue_collection.items():
+        total_num_sample += len(values)
+        self.tis_names.add(tissue)
+        
+        
+      temp_tis = set()
+      if total_num_sample == 17382:
+        for tissue in self.tis_names:
+          len_t = len(tissue_collection.get(tissue))
+          if len_t < 100:
+            tissue_collection.pop(tissue)
+
+          else:
+            temp_tis.add(tissue)
+        
+        data[gn] = tissue_collection
+    
+
+    return data, sorted(temp_tis)
 
 
 def samples(url):
@@ -58,9 +114,6 @@ def samples(url):
             samples_names[row["SMTSD"]].append(row["SAMPID"])
 
     return samples_names
-
-
-
 
 def extracting_data(extract_enzymes_tup, samples_names):
   dataset = ["prostate", "whole_blood", "vagina", "uterus", "thyroid", "testis", "stomach", "spleen", "small_intestine_terminal_ileum", "skin_sun_exposed_lower_leg", "skin_not_sun_exposed_suprapubic", "pancreas", "pituitary", "ovary", "nerve_tibial", "muscle_skeletal", "minor_salivary_gland",
@@ -83,6 +136,7 @@ def extracting_data(extract_enzymes_tup, samples_names):
           values = list(csv.reader([line], delimiter='\t'))[0]
           row_dict = dict(zip(column_names, values))
           gene_name = row_dict.get("Description")
+          en_id  = row_dict.get("Name")
           if gene_name in extract_enzymes_tup or len(non_glyco_enzymes) <= 5000:
             if gene_name not in extract_enzymes_tup:
               non_glyco_enzymes.add(gene_name)
@@ -98,9 +152,7 @@ def extracting_data(extract_enzymes_tup, samples_names):
 
 
   return tissue_sets_data, non_glyco_enzymes
-
-
-
+ 
 
 def setting_values_per_tissue(dataset, total_sample=False): 
   tissue_set = {}
@@ -130,7 +182,7 @@ def setting_values_per_tissue(dataset, total_sample=False):
 
 
 def adding_headers(tissue_dict_dataset, collapsed=False):
-  headers = []
+  headers = []  
   collapsed_headers = []
   for key, val in tissue_dict_dataset.items():
     for i in range(val):
@@ -168,14 +220,46 @@ def assign_class(tissue_headers, tissue_name):
   return clas_nm
 
 
+
+def check_for_file():
+  file_path = "data/temp_data.csv"
+  sam_url = "https://storage.googleapis.com/adult-gtex/annotations/v8/metadata-files/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt"
+  fs = FileStatus(file_path)
+
+  if os.path.exists(file_path):
+    extracted_dataset, tissues_names = fs.extract_file_data()
+
+  else:
+    samples_names = samples(sam_url)
+    gn_set = GeneSet()
+    total_enzymes = gn_set.get_all_glyco_enz()
+    extracted_dataset, non_genes = extracting_data(total_enzymes, samples_names)
+    tissues_names = fs.save_file_to(extracted_dataset)
+
+  return extracted_dataset, tissues_names
+
+
+
+
+
+#genes = set(sys.argv[1:])
+#gtd = GTexData()
+#data = gtd.restrict(genes=genes,nottissue='Liver',includetissue=True)
+
+#print(data)
+
+
+"""
 def reading_file_in(path):
   tis_names = set()
   temp_data = defaultdict(list)
   data = {}
   with open(path, "r") as file:
-      dict_reader = csv.DictReader(file, delimiter="\t")
-      for row in dict_reader:
-        temp_data[row["Gene"]].append((row["Tissue"], float(row["Value"])))
+    dict_reader = csv.DictReader(file, delimiter="\t")
+    for row in dict_reader:
+      temp_data[row["Gene"]].append((row["Tissue"], float(row["Value"])))
+  
+
   for gn, tis_val in temp_data.items():
     tissue_collection = defaultdict(list)
     for t_v in tis_val:
@@ -193,6 +277,8 @@ def reading_file_in(path):
       else:
         print(tissue, len(values))
 
+    
+
     print(len(tis_names))
     print(total_num_sample)
     if total_num_sample == 17382:
@@ -200,50 +286,5 @@ def reading_file_in(path):
   
   return data, sorted(tis_names)
 
-      
-def save_file_to(data, filename, delimiter='\t'):
-    tis_names = set()
-    full_path = os.path.join("data/" + filename)
-    with open(full_path, 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile, delimiter=delimiter)
-        head = ["Gene", "Tissue", "Value"]
-        writer.writerow(head)
-        header = list(data.keys())
-        for enz in header:
-          for t in data.get(enz):
-            for k_tis,val_lis in t.items():
-              tis_names.add(k_tis)
-              for v in val_lis:
-                writer.writerow([enz, k_tis, v])
-    
-    return sorted(tis_names)
-
-
-
-def check_for_file():
-  file_path = "data/temp_data.csv"
-  sam_url = "https://storage.googleapis.com/adult-gtex/annotations/v8/metadata-files/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt"
-  
-  if os.path.exists(file_path):
-    extracted_dataset, tissues_names = reading_file_in(file_path)
-
-  else:
-    samples_names = samples(sam_url)
-    gn_set = GeneSet()
-    total_enzymes = gn_set.get_all_glyco_enz()
-    extracted_dataset, non_genes = extracting_data(total_enzymes, samples_names)
-    tissues_names = save_file_to(extracted_dataset, "temp_data.csv")
-
-  return extracted_dataset, tissues_names
-
-
-extracted_dataset, tissues_names = check_for_file()
-
-
-#genes = set(sys.argv[1:])
-#gtd = GTexData()
-#data = gtd.restrict(genes=genes,nottissue='Liver',includetissue=True)
-
-#print(data)
-
+  """
 

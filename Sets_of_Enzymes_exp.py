@@ -21,7 +21,6 @@ test = extracted_dataset.get("GGTA1")
 def set_enz_experiment(gene_set, all_enzymes, dataset):     
     over_all_start = time.time()
     cr = create_random_sets(gene_set, dataset, all_enzymes)
-    print(cr)
     precision = 0.9
     col_zscore = {}
     for tissue in tissues_names:
@@ -76,7 +75,7 @@ for i, (gn_group, group_name) in enumerate(all_sets.items()):
 
 
 
-save_zdata(total_gr_zscore, 3)
+save_zdata(total_gr_zscore, 7)
 
 
 
