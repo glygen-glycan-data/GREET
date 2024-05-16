@@ -58,7 +58,15 @@ class EnzymeData:
   def generate_dataset(self):
     gen_dataset = defaultdict(list)
     for gn in self.gen_set:
+      #for keys, values in self.dataset.items():
+        #if gn in keys:
+          #gen_dataset[gn].append(values)
+          #print(gn)
+      if self.dataset.get(gn) == None:
+        print(gn, "DNE")
+
       gen_dataset[gn].append(self.dataset.get(gn)) 
+
     self.enz_dict, tissue_set = setting_values_per_tissue(gen_dataset, total_sample=True)
     self.head = adding_headers(tissue_set)
     self.df = pd.DataFrame(self.enz_dict, index= self.head)

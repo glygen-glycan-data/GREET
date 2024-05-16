@@ -27,7 +27,7 @@ def set_enz_experiment(gene_set, all_enzymes, dataset):
         start_time = time.time()
         ml_score = RecallScore()
         for rand_num, ext_enz_set in cr.items():
-            glyco_enz_set_data = EnzymeData(dataset, ext_enz_set)
+            glyco_enz_set_data = EnzymeData(dataset, ext_enz_set)        
             glyco_enz_set_data.add_parameters(tissue)
             gnt = glyco_enz_set_data.get_gen_dataset() 
             glyco_enz_set_data.reset() 
@@ -57,25 +57,29 @@ def set_enz_experiment(gene_set, all_enzymes, dataset):
 
 
 
+
+
+def run(sandbox_data, glyco_enz,extracted_data):
+    total_gr_zscore = defaultdict(list)
+    for i, (gn_group, group_name) in enumerate(sandbox_data.items()):
+        gn_group_set = ""
+        for gn in gn_group:
+            gn_group_set += f"{gn} "  
+
+        if list(gn_group)[0] != "GGTA1":
+            print(gn_group_set)
+            total_gr_zscore[(group_name, gn_group_set)] = set_enz_experiment(gn_group, glyco_enz, extracted_data)
+
+    return total_gr_zscore
+
+
+
 gn_sets = GeneSet()
 #gn_set1 = gn_sets.extract_glyco_set_at('Fucp', '3', 'a', 'GlcpNAc')  
 all_sets = gn_sets.get_sdbox_data()
 glyco_enzymes = gn_sets.get_all_glyco_enz() 
-total_gr_zscore = defaultdict(list)
-
-
-for i, (gn_group, group_name) in enumerate(all_sets.items()):
-    gn_group_set = ""
-    for gn in gn_group:
-        gn_group_set += f"{gn} "  
-
-    if list(gn_group)[0] != "GGTA1":
-        print(gn_group_set)
-        total_gr_zscore[(group_name, gn_group_set)] = set_enz_experiment(gn_group, glyco_enzymes, extracted_dataset)
-
-
-
-save_zdata(total_gr_zscore, 4)
+#r = run(all_sets, glyco_enzymes, extracted_dataset)
+#save_zdata(r, 4)
 
 
 

@@ -82,7 +82,6 @@ class FileStatus:
       for t_v in tis_val:
         tissue_collection[t_v[0]].append(t_v[1])
 
-
       total_num_sample = 0
       for tissue, values in tissue_collection.items():
         total_num_sample += len(values)
