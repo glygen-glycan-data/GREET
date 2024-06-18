@@ -13,21 +13,28 @@ import statistics, math
 warnings.filterwarnings("ignore")
 
 
-
-
-names = ["Logistic Regression"]#,  'Modified LR L1', "KNN"] # 'QDA']
-classifiers = [
-    LogisticRegression(max_iter=50000)]
-    #LogisticRegression(penalty='l1', solver='liblinear', max_iter=50000),
-   # KNeighborsClassifier()]
+#names = ["LR L1"] #["Logistic Regression"],  'Modified LR L1', "KNN"] # 'QDA']
+#classifiers = [
+    #LogisticRegression(max_iter=50000)]
+    #LogisticRegression(penalty='l1', solver='liblinear', max_iter=50000),]
+    #KNeighborsClassifier()]
    # QuadraticDiscriminantAnalysis()]
+
+
+names = ["Logistic Regression"]
+classifiers = [LogisticRegression(max_iter=50000)]
 
 ml_names_classi = {}
 for i in range(len(names)):
   ml_names_classi[names[i]] = classifiers[i]
+  
+HPATissue_file = "HPA_tissue.txt"
+Gspec_file = "proteinatlas.tsv"
+h = HPATissueClassifcation(HPATissue_file, Gspec_file)
+hpa_tis = h.get_HPA_Tissue()
+extracted_dataset, tissues_names = check_for_file(hpa_tis, True)
 
 
-extracted_dataset, tissues_names = check_for_file()
 
 
 def create_random_sets(gene_set, dataset, glyco_set):
@@ -64,8 +71,9 @@ class EnzymeData:
           #print(gn)
       if self.dataset.get(gn) == None:
         print(gn, "DNE")
-
-      gen_dataset[gn].append(self.dataset.get(gn)) 
+        pass
+      else:
+        gen_dataset[gn].append(self.dataset.get(gn)) 
 
     self.enz_dict, tissue_set = setting_values_per_tissue(gen_dataset, total_sample=True)
     self.head = adding_headers(tissue_set)

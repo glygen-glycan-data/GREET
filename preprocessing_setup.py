@@ -5,6 +5,7 @@ import numpy as np
 import os, sys, re
 
 
+
 class GeneSet():
     sandbox_url = "https://edwardslab.bmcb.georgetown.edu/sandboxdev/api/getEnzymeMappings.php?limiter=no_filter&val="   
     
@@ -75,13 +76,22 @@ class FileStatus:
     
     return sorted(self.tis_names)
 
-  def extract_file_data(self):
+  def extract_file_data(self, hpa_tissue=None, hpa_annotations=False):
     data = {}
     for gn, tis_val in self.temp_data.items():
       tissue_collection = defaultdict(list)
       for t_v in tis_val:
-        tissue_collection[t_v[0]].append(t_v[1])
-
+        tis = t_v[0]
+        val = t_v[1]
+        if hpa_annotations == True:
+          hpa_tis = hpa_tissue.get(tis)
+          if hpa_tis == None:
+            tissue_collection[tis].append(t_v[1])
+          else:
+            tissue_collection[hpa_tis].append(t_v[1])
+        else:
+          tissue_collection[tis].append(val)
+          
       total_num_sample = 0
       for tissue, values in tissue_collection.items():
         total_num_sample += len(values)
@@ -102,6 +112,50 @@ class FileStatus:
     
 
     return data, sorted(temp_tis)
+
+
+class HPATissueClassifcation():
+  def __init__(self, Tissue_filename, Gene_classifcation_file):
+    dir = "data/"
+    self.Tfile = os.path.join(dir,Tissue_filename)
+    self.Gfile = os.path.join(dir, Gene_classifcation_file)
+    self.read_HPA_Tissue()
+    self.read_Gene_classifcation()
+
+  def read_HPA_Tissue(self):
+    self.hpa_tissue = defaultdict(list)
+    #Tissue Name GTEx Tissue
+    for r in csv.DictReader(open(self.Tfile), delimiter = '\t'):
+      self.hpa_tissue[r["GTEx tissue"]] = r["Tissue"]
+    
+  def get_HPA_Tissue(self):
+    return self.hpa_tissue
+
+  def read_Gene_classifcation(self):
+    self.tissueSpec = defaultdict(list)
+    with open(self.Gfile, "r", encoding='utf-8') as f:
+      for row in csv.DictReader(f, delimiter = "\t"):
+        t_row = row["RNA tissue specificity"]
+        if t_row == "Low tissue specificity":
+          self.tissueSpec[row['Gene']].append(t_row)
+        elif t_row != "Not detected":
+          tissue_types = row["RNA tissue specific nTPM"].split(";")
+          for t in tissue_types:
+            self.tissueSpec[row['Gene']].append(t_row.partition(" ")[2].capitalize()
+                                         + " in " + t.partition(":")[0].capitalize())
+        else:
+          self.tissueSpec[row['Gene']].append(t_row)
+
+  def extract_gene_specificity(self, glyco_enz_data):
+    new_enz_data = defaultdict(list)
+    for key, values in glyco_enz_data.items():
+      for row in values:
+        if len(self.tissueSpec.get(row["Gene"], [])) > 0:
+          print(self.tissueSpec[row["Gene"]])
+          row["HPA Tissue"] = self.hpa_tissue.get(row["Tissue"])
+          row["Tissue Specificity"] = self.tissueSpec[row["Gene"]]
+          
+    return glyco_enz_data
 
 
 def samples(url):
@@ -153,9 +207,10 @@ def extracting_data(extract_enzymes_tup, samples_names):
   return tissue_sets_data, non_glyco_enzymes
  
 
-def setting_values_per_tissue(dataset, total_sample=False): 
+def setting_values_per_tissue(dataset, hpa_tissues = {}, total_sample=False): 
   tissue_set = {}
   tissue_type_dict = defaultdict(list)
+  
   for k, v_dic in dataset.items():
     for v_lis in v_dic:
       if v_lis != None:
@@ -220,13 +275,13 @@ def assign_class(tissue_headers, tissue_name):
 
 
 
-def check_for_file():
-  file_path = "data/temp_data.csv"
+def check_for_file(hpa_tissue=None, return_hpa=False):
+  file_path = "data/temp_data_test.csv"
   sam_url = "https://storage.googleapis.com/adult-gtex/annotations/v8/metadata-files/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt"
   fs = FileStatus(file_path)
 
   if os.path.exists(file_path):
-    extracted_dataset, tissues_names = fs.extract_file_data()
+    extracted_dataset, tissues_names = fs.extract_file_data(hpa_tissue, return_hpa)
 
   else:
     samples_names = samples(sam_url)
@@ -246,6 +301,10 @@ def check_for_file():
 #data = gtd.restrict(genes=genes,nottissue='Liver',includetissue=True)
 
 #print(data)
+
+
+
+
 
 
 """

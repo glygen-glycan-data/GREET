@@ -14,7 +14,7 @@ def print_process(process_name, start_time):
 
 
 
-test = extracted_dataset.get("GGTA1")
+#test = extracted_dataset.get("GGTA1")
 #for t, d in test.items():
 #    print(t, len(d))
 
@@ -59,9 +59,9 @@ def set_enz_experiment(gene_set, all_enzymes, dataset):
 
 
 
-def run(sandbox_data, glyco_enz,extracted_data):
+def run(enz_sets, glyco_enz,extracted_data, filename):
     total_gr_zscore = defaultdict(list)
-    for i, (gn_group, group_name) in enumerate(sandbox_data.items()):
+    for i, (gn_group, group_name) in enumerate(enz_sets.items()):
         gn_group_set = ""
         for gn in gn_group:
             gn_group_set += f"{gn} "  
@@ -70,7 +70,7 @@ def run(sandbox_data, glyco_enz,extracted_data):
             print(gn_group_set)
             total_gr_zscore[(group_name, gn_group_set)] = set_enz_experiment(gn_group, glyco_enz, extracted_data)
 
-    return total_gr_zscore
+    save_zdata(total_gr_zscore, filename)
 
 
 
@@ -78,8 +78,8 @@ gn_sets = GeneSet()
 #gn_set1 = gn_sets.extract_glyco_set_at('Fucp', '3', 'a', 'GlcpNAc')  
 all_sets = gn_sets.get_sdbox_data()
 glyco_enzymes = gn_sets.get_all_glyco_enz() 
-#r = run(all_sets, glyco_enzymes, extracted_dataset)
-#save_zdata(r, 4)
+#r = run(all_sets, glyco_enzymes, extracted_dataset, "test")
+
 
 
 

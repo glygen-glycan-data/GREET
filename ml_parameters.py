@@ -55,6 +55,7 @@ class ML_Parameters_Model:
     
   def pr_curve(self):
     pred_proba = self.model.predict_proba(self.X_test)[:,1]
+
     precision, recall, _ = precision_recall_curve(self.y_test, pred_proba)
     p = Pre_Recall(recall, precision, self.model_name)
     interp_precision = p.interpolated_precision()
