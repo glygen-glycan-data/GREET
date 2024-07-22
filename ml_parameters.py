@@ -1,8 +1,7 @@
 from sklearn.metrics import classification_report
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import precision_recall_curve, roc_curve, auc
-from sklearn.model_selection import cross_val_score
-from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import StratifiedShuffleSplit, StratifiedKFold, cross_val_score
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.metrics import precision_recall_fscore_support
 import numpy as np
@@ -14,13 +13,38 @@ from plots import *
 def x_y_split(data):
     X = data.drop(['Class'], axis = 1)
     y = np.array(data["Class"])
+    class_counts = np.bincount(y)
+
+    count_class_0 = class_counts[0]
+    count_class_1 = class_counts[1]
     strat_split = StratifiedShuffleSplit(n_splits=1, test_size=0.2)
     #strat_split.split(X,y)[0]
     for train_index, test_index in strat_split.split(X, y):
       X_train, X_test = X.iloc[train_index], X.iloc[test_index]
       y_train, y_test = y[train_index], y[test_index]
-    under = RandomUnderSampler(sampling_strategy=0.1)
-    X_train, y_train = under.fit_resample(X_train, y_train)
+
+    #Only for Single_Cell: 
+    #Remove < 10000 count from tissue
+
+    if count_class_1 < 10000:
+      under = RandomUnderSampler(sampling_strategy=0.1)
+      X_train, y_train = under.fit_resample(X_train, y_train)
+
+    #Downsample X_test for single cell
+      under = RandomUnderSampler(sampling_strategy=1)
+      X_test, y_test = under.fit_resample(X_test, y_test)
+  
+    return X_train, X_test, y_train, y_test
+
+
+def cv_split(data):
+    skf = StratifiedKFold(n_splits=5)
+    X = data.drop(['Class'], axis = 1)
+    y = np.array(data["Class"])
+    for train_index, test_index in skf.split(X, y):
+      X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+      y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+    
     return X_train, X_test, y_train, y_test
 
 
@@ -74,9 +98,11 @@ class ML_Parameters_Model:
 
   
 
-def gen_ml_report(df, ml_names, tissue_name, x_y_split, rm_enz_exp=False):
+#def gen_ml_report(df, ml_names, tissue_name, x_y_split, rm_enz_exp=False):
+def gen_ml_report(df, ml_names, tissue_name, cv_split, rm_enz_exp=False):
   
-  X_train, X_test, y_train, y_test = x_y_split(df)
+  #X_train, X_test, y_train, y_test = x_y_split(df)
+  X_train, X_test, y_train, y_test = cv_split(df)
 
   pr_re_dic = {}
   ml_pred_lis = []
@@ -87,7 +113,7 @@ def gen_ml_report(df, ml_names, tissue_name, x_y_split, rm_enz_exp=False):
   for model_name, model in ml_names.items():
     m = ML_Parameters_Model(df, model_name, model, X_train, X_test, y_train, y_test)
     pr = m.set_up()
-
+    #print(classification_report(y_test, pr))
     auc_val = m.auc_val()
     precision, recall, interp_precision = m.pr_curve()
     clasi_m_data = m.classi_map_data()
@@ -112,7 +138,7 @@ def gen_ml_report(df, ml_names, tissue_name, x_y_split, rm_enz_exp=False):
 
   #heatmap_class_report(classification_data, tissue_name)
   #tissue_figure('Interp', tissue_pr_re, Pre_Recall,tissue_name)
-  #confusion_table(ml_pred_lis, ml_dict.keys(), y_test, tissue_name)
+  #confusion_table(ml_pred_lis, ml_names.keys(), y_test, tissue_name)
 
   if rm_enz_exp == False:
     return pr_re_dic, collect_cdf_score #collect_auc_score

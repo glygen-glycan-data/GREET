@@ -188,10 +188,11 @@ def confusion_table(model_predictions, models_names,  data, tissue_name):
   xlabels = ["TP", "TN", "FP", "FN", "ACC"]
   graph = sns.heatmap(m_dic, xticklabels=xlabels ,cmap = "Blues", annot = True)
   plt.title(tissue_name)
-  directory = f".\\plot_figures\\{gene_key[0]}\\Cofusion table\\"
+  #directory = f".\\plot_figures\\{gene_key[0]}\\Cofusion table\\"
   #file_name = f"{tissue_name}"
   #os.makedirs(directory, exist_ok=True)
   #plt.savefig(os.path.join(directory, file_name))
+  plt.show()
   plt.close()
 
 def heatmap_class_report(compare_data, t_name):
@@ -209,6 +210,7 @@ def heatmap_class_report(compare_data, t_name):
   #file_name = f"heatmap_{t_name}"
   #os.makedirs(directory, exist_ok=True)
   #plt.savefig(os.path.join(directory, file_name))
+  plt.show()
   plt.close()
 
 
