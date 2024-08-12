@@ -1,0 +1,47 @@
+Tissue	GTEx tissue
+Adipose tissue	Adipose - Subcutaneous
+Adipose tissue	Adipose - Visceral (Omentum)
+Adrenal gland	Adrenal Gland
+Amygdala	Brain - Amygdala
+Breast	Breast - Mammary Tissue
+Caudate	Brain - Caudate (basal ganglia)
+Cerebellum	Brain - Cerebellar Hemisphere
+Cerebellum	Brain - Cerebellum
+Cerebral cortex	Brain - Anterior cingulate cortex (BA24)
+Cerebral cortex	Brain - Cortex
+Cerebral cortex	Brain - Frontal Cortex (BA9)
+Cervix	Cervix - Ectocervix
+Cervix	Cervix - Endocervix
+Colon	Colon - Sigmoid
+Colon	Colon - Transverse
+Endometrium	Uterus
+Esophagus	Esophagus - Mucosa
+Fallopian tube	Fallopian Tube
+Heart muscle	Heart - Atrial Appendage
+Heart muscle	Heart - Left Ventricle
+Hippocampus	Brain - Hippocampus
+Hypothalamus	Brain - Hypothalamus
+Kidney	Kidney - Cortex
+Kidney	Kidney - Medulla
+Liver	Liver
+Lung	Lung
+Nucleus accumbens	Brain - Nucleus accumbens (basal ganglia)
+Ovary	Ovary
+Pancreas	Pancreas
+Pituitary gland	Pituitary
+Prostate	Prostate
+Putamen	Brain - Putamen (basal ganglia)
+Retina	Retina
+Salivary gland	Minor Salivary Gland
+Skeletal muscle	Muscle - Skeletal
+Skin	Skin - Not Sun Exposed (Suprapubic)
+Skin	Skin - Sun Exposed (Lower leg)
+Small intestine	Small Intestine - Terminal Ileum
+Spinal cord	Brain - Spinal cord (cervical c-1)
+Spleen	Spleen
+Stomach	Stomach
+Substantia nigra	Brain - Substantia nigra
+Testis	Testis
+Thyroid gland	Thyroid
+Urinary bladder	Bladder
+Vagina	Vagina
