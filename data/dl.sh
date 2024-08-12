@@ -9,3 +9,8 @@ ln -s GTEx_gene_tpm-"$DATE".gct.gz GTEx_gene_tpm.gct.gz
 wget -O GTEx_SampleAttributesDS-"$DATE".txt 'https://storage.googleapis.com/adult-gtex/annotations/v8/metadata-files/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt'
 rm -f GTEx_SampleAttributesDS.txt
 ln -s GTEx_SampleAttributesDS-"$DATE".txt GTEx_SampleAttributesDS.txt
+
+wget -O GTEx_8_tissues_snRNAseq_atlas_071421.public_obs.h5ad 'https://storage.googleapis.com/adult-gtex/single-cell/v9/snrna-seq-data/GTEx_8_tissues_snRNAseq_atlas_071421.public_obs.h5ad'
+
+
+

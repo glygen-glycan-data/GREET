@@ -117,7 +117,7 @@ for ct in Tissue_cells_types:
     combined_tis_ct.add(tis)
     combined_tis_ct.add(cell_type)
 
-print(len(combined_tis_ct))
+
 
 gn_lis = []
 gn_not_indata = []
@@ -155,6 +155,8 @@ def find_ct_less_100(m_df, unique_ind):
 
 
 drop_cts, reduced_cell_types, ind_counts = find_ct_less_100(merged_data, combined_tis_ct)
+
+print(len(reduced_cell_types))
 
 ### Run this script once to extract Percent Detected and Index Counts per CT type ####
 """
@@ -223,6 +225,7 @@ def single_enz_experiment(gene_set, all_enzymes, non_glyco_genes, dataset):
             gnt = make_df(ext_enz_set)
             if type(ct) == tuple:
                 gnt["Class"] = (gnt.index == ct).astype(int)
+
             
             else:
                 index_flat = gnt.index.map(lambda x: " ".join(map(str,x)))

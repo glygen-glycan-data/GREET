@@ -52,7 +52,9 @@ class FileStatus:
   def __init__(self,filename):
     self.path = filename
     self.tis_names = set()
-    self.read_file()
+    
+    if os.path.exists(filename):
+      self.read_file()
 
   def read_file(self):
     self.temp_data = defaultdict(list)
@@ -190,18 +192,18 @@ def extracting_data(extract_enzymes_tup, samples_names):
           row_dict = dict(zip(column_names, values))
           gene_name = row_dict.get("Description")
           en_id  = row_dict.get("Name")
-          if gene_name in extract_enzymes_tup:# or len(non_glyco_enzymes) <= 5000:
-            #if gene_name not in extract_enzymes_tup:
-            #  non_glyco_enzymes.add(gene_name)
-            for tissue, samp in samples_names.items():
-              tis_dict = defaultdict(list)
-              for s in samp:
-                s_get = row_dict.get(s)
-                if s_get != None:
-                  if tissue != None:
-                    tis_dict[tissue].append(float(s_get))
-              if tis_dict != {} :
-                tissue_sets_data[gene_name].append(tis_dict)
+          #if gene_name in extract_enzymes_tup or len(non_glyco_enzymes) <= 5000:
+          #  if gene_name not in extract_enzymes_tup:
+          #    non_glyco_enzymes.add(gene_name)
+          for tissue, samp in samples_names.items():
+            tis_dict = defaultdict(list)
+            for s in samp:
+              s_get = row_dict.get(s)
+              if s_get != None:
+                if tissue != None:
+                  tis_dict[tissue].append(float(s_get))
+            if tis_dict != {} :
+              tissue_sets_data[gene_name].append(tis_dict)
 
 
   return tissue_sets_data, non_glyco_enzymes
