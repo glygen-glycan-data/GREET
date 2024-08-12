@@ -134,7 +134,13 @@ def find_ct_less_100(m_df, unique_ind):
     updated_cell_types = []
     ct_types_counts = {}
     for ct in unique_ind:
-        m_df["Class"] = (m_df.index == ct).astype(int)
+        if type(ct) == tuple:
+            m_df["Class"] = (m_df.index == ct).astype(int)
+            
+        else:
+            index_flat = m_df.index.map(lambda x: " ".join(map(str,x)))
+            m_df["Class"] = index_flat.str.contains(ct, regex=False)
+
         count_class_1 = (m_df["Class"] == 1).sum()
         ct_types_counts[ct] = count_class_1
         if count_class_1 < 200:
