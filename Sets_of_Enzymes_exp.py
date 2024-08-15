@@ -2,8 +2,14 @@ from app import *
 import time
 
 
-#enz_set format or could be full sets of Enzymes:
-#['form_name'], ['site'], ["anomer"], ['parent_form_name']
+
+HPATissue_file = "HPA_tissue.txt"
+Gspec_file = "proteinatlas.tsv"
+h = HPATissueClassifcation(HPATissue_file, Gspec_file)
+hpa_tis = h.get_HPA_Tissue()
+extracted_dataset, tissues_names = check_for_file(hpa_tis, True)
+
+print(len(extracted_dataset))
 
 def print_process(process_name, start_time):
     end_time = time.time()
@@ -13,14 +19,9 @@ def print_process(process_name, start_time):
     return end_time
 
 
-
-#test = extracted_dataset.get("GGTA1")
-#for t, d in test.items():
-#    print(t, len(d))
-
 def set_enz_experiment(gene_set, all_enzymes, dataset):     
     over_all_start = time.time()
-    cr = create_random_sets(gene_set, dataset, all_enzymes)
+    cr = create_random_sets(gene_set, dataset, all_enzymes, random_size=20)
     precision = 0.9
     col_zscore = {}
     for tissue in tissues_names:
@@ -78,7 +79,7 @@ gn_sets = GeneSet()
 #gn_set1 = gn_sets.extract_glyco_set_at('Fucp', '3', 'a', 'GlcpNAc')  
 all_sets = gn_sets.get_sdbox_data()
 glyco_enzymes = gn_sets.get_all_glyco_enz() 
-#r = run(all_sets, glyco_enzymes, extracted_dataset, "test")
+r = run(all_sets, glyco_enzymes, extracted_dataset, "test")
 
 
 

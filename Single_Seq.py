@@ -191,6 +191,8 @@ def ct_name(cell_type_name, single_cts_track=single_cts_track):
 
 print(len(reduced_cell_types))
 
+print(len(reduced_cell_types))
+
 ### Run this script once to extract Percent Detected and Index Counts per CT type ####
 
 """
@@ -265,6 +267,7 @@ def single_enz_experiment(gene_set, all_enzymes, non_glyco_genes, single_cts_tra
             gnt = make_df(ext_enz_set)
             if type(ct) == tuple:
                 gnt["Class"] = (gnt.index == ct).astype(int)
+
             
             else:
                 index_flat = gnt.index.map(lambda x: " ".join(map(str,x)))
