@@ -38,7 +38,6 @@ def create_random_sets(gene_set, dataset, glyco_set, random_size=int):
       non_glyco_set.append(gn)
   
   for r_i in range(random_size):
-    print(non_glyco_set)
     get_random_enz = random.sample(non_glyco_set, len(gene_set))
     r_gen[r_i + 1] = get_random_enz     
   
