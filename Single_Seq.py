@@ -11,6 +11,7 @@ from ml_parameters import *
 from plots import *
 from sklearn.preprocessing import MaxAbsScaler
 import time, multiprocessing
+from queue import Empty
 
 
 
@@ -117,7 +118,7 @@ for ct in Tissue_cells_types:
     combined_tis_ct.add(tis)
     combined_tis_ct.add(cell_type)
 
-print(len(combined_tis_ct))
+
 
 gn_lis = []
 gn_not_indata = []
@@ -129,10 +130,13 @@ for gn_set in all_sets:
     else:
       gn_not_indata.append(gn)
 
+
+
 def find_ct_less_100(m_df, unique_ind):
     ct_less_100 = []
     updated_cell_types = []
     ct_types_counts = {}
+    single_ct_track = []
     for ct in unique_ind:
         if type(ct) == tuple:
             m_df["Class"] = (m_df.index == ct).astype(int)
@@ -143,27 +147,60 @@ def find_ct_less_100(m_df, unique_ind):
 
         count_class_1 = (m_df["Class"] == 1).sum()
         ct_types_counts[ct] = count_class_1
-        if count_class_1 < 200:
+        
+        track_id = 0
+        for check_type in unique_ind:
+            if type(ct) != tuple:
+                if ct == check_type or ct in check_type:
+                    track_id += 1
+    
+        if track_id == 2:
+            ct_less_100.append(ct)
+            single_ct_track.append(ct)
+
+        elif count_class_1 < 200:
             ct_less_100.append(ct)
         elif ct == "Unknown":
             ct_less_100.append(ct)
+    
         else:
             updated_cell_types.append(ct)
    
-    return ct_less_100, updated_cell_types, ct_types_counts
+    return ct_less_100, updated_cell_types, ct_types_counts, single_ct_track
+
+
+drop_cts, reduced_cell_types, ind_counts, single_cts_track = find_ct_less_100(merged_data, combined_tis_ct)
 
 
 
-drop_cts, reduced_cell_types, ind_counts = find_ct_less_100(merged_data, combined_tis_ct)
+
+def ct_name(cell_type_name, single_cts_track=single_cts_track):
+    if type(cell_type_name) == tuple:
+        if cell_type_name[0] in single_cts_track:
+            n_ct = f"{cell_type_name[0]} in [{cell_type_name[1]}]"
+            print(n_ct)
+        else:
+            n_ct = f"{cell_type_name[0]} in {cell_type_name[1]}"
+
+    else:
+        n_ct = cell_type_name
+
+    return n_ct
+
+
+
+print(len(reduced_cell_types))
 
 ### Run this script once to extract Percent Detected and Index Counts per CT type ####
+
 """
 
 def percent_detected(df, unique_ind, gly_enz, gly_not_indata):
-    p_d = {}
+    p_d = defaultdict(list)
     for enz in gly_enz:
         if enz in gly_not_indata:
-            continue
+           continue
+
         print(enz)
         over_all_start = time.time()
         for ct in unique_ind:
@@ -174,12 +211,15 @@ def percent_detected(df, unique_ind, gly_enz, gly_not_indata):
                 index_flat = df.index.map(lambda x: " ".join(map(str,x)))
                 df["Class"] = index_flat.str.contains(ct, regex=False)
 
-            filtered_rows = df[df["Class"] == 1]
-            non_zero_class_1 = len(filtered_rows[filtered_rows[enz] != 0])
-            total_cells = len(filtered_rows[enz])
-            detected = (non_zero_class_1/total_cells) * 100
-            p_d[(enz,ct)] = detected
-        
+
+            name_ct = ct_name(ct)
+            for i in range(2):
+                filtered_rows = df[df["Class"] == i]
+                non_zero = len(filtered_rows[filtered_rows[enz] != 0])
+                total_cells = len(filtered_rows[enz])
+                detected = (non_zero/total_cells) * 100
+                p_d[(enz, name_ct)].append(detected)
+
         print_process("Whole Set", over_all_start)
     
     return p_d
@@ -192,31 +232,33 @@ per_det = percent_detected(merged_data, combined_tis_ct, glyco_enzymes, gn_not_i
 full_path = os.path.join("data/" + "percent_detected_count.tsv")
 with open(full_path, 'w', newline='') as csvfile:
     writer = csv.writer(csvfile, delimiter="\t")
-    head = ["Gene", "Tissue", "Percent Detected"]
+    head = ["Gene", "Tissue", "Percent Detected Class 0", "Percent Detected Class 1"]
     writer.writerow(head)
     for k,v in per_det.items():
-        writer.writerow([k[0], k[1], v])
+        writer.writerow([k[0], k[1], v[0], v[1]]
+
+
 
 full_path = os.path.join("data/" + "ind_count.tsv")
 with open(full_path, 'w', newline='') as csvfile:
     writer = csv.writer(csvfile, delimiter="\t")
-    head = ["Gene", "Count"]
+    head = ["Old CT", "New CT", "Count"]
     writer.writerow(head)
     for k,v in ind_counts.items():
-        writer.writerow([k,v])
-"""
+        if k in reduced_cell_types:
+            n_k = ct_name(k)
+            writer.writerow([k, n_k, v])
 
+"""
 
 #print(gn_not_indata)
 
 
-def single_enz_experiment(gene_set, all_enzymes, non_glyco_genes, dataset):     
+def single_enz_experiment(gene_set, all_enzymes, non_glyco_genes, single_cts_track):     
     over_all_start = time.time()
     cr = create_random_sets(gene_set, non_glyco_genes, all_enzymes, random_size=20)
     precision = 0.9
     col_zscore = {}
-    cell_type_test = ('Heart')
-    #for ct in combined_tis_ct:
     for ct in reduced_cell_types:
         ml_score = RecallScore()
         for rand_num, ext_enz_set in cr.items():
@@ -233,11 +275,13 @@ def single_enz_experiment(gene_set, all_enzymes, non_glyco_genes, dataset):
             pr_dic_scores, cdf_scores = re.execute_report(rand_num, ml_names_classi)
             cdf = ml_score.extract_cdf_scores(cdf_scores)
             pr = ml_score.extract_pr_scores(pr_dic_scores)
-            
-        
+
+
+
+        name_ct = ct_name(ct)
         if cdf:
-            sc = Scores(cdf)
-            col_zscore[ct] = sc.extract_zscore()
+            sc = Scores(cdf)    
+            col_zscore[name_ct] = sc.extract_zscore()
         
 
             #plots = PRplots(cdf, pr, precision, plt_show=True, plt_save=False)
@@ -253,6 +297,8 @@ def single_enz_experiment(gene_set, all_enzymes, non_glyco_genes, dataset):
 
 
 
+
+
 class Workers:
     def __init__(self, glyco_enz, non_genes, data, genes_nt_data):
         self.glyco_enz = sorted(glyco_enz)
@@ -260,85 +306,42 @@ class Workers:
         self.data = data
         self.gn_nt_data = genes_nt_data
 
-    def worker_1(self):
+    def worker(self, queue, worker_id):
         total_gr_zscore = defaultdict(list)
-        index = 0
-        while index < len(self.glyco_enz):
-            test_gn = []
-            gn = self.glyco_enz[index]
-            if gn not in self.gn_nt_data:
-                print("Worker 1", gn)
-                test_gn.append(gn)
-                total_gr_zscore[("Worker 1", gn)] = single_enz_experiment(test_gn, self.glyco_enz, self.non_gly_gn, self.data)
-                save_zdata(total_gr_zscore, "Worker 1") 
-            
-            index += 4
+        while True:
+            try:
+                gn = queue.get(timeout=2) 
+            except Empty:
+                break  
 
-    def worker_2(self):
-        total_gr_zscore = defaultdict(list)
-        index = 1
-        while index <= len(self.glyco_enz):
-            test_gn = []
-            gn = self.glyco_enz[index]   
             if gn not in self.gn_nt_data:
-                print("Worker 2", gn)
-                test_gn.append(gn)
-                total_gr_zscore[("Worker 2", gn)] = single_enz_experiment(test_gn, self.glyco_enz, self.non_gly_gn, self.data)
-                save_zdata(total_gr_zscore, "Worker 2")
-            
-            index += 4
+                print(f"Worker {worker_id}", gn)
+                test_gn = [gn]
+                total_gr_zscore[(f"Worker {worker_id}", gn)] = single_enz_experiment(test_gn, self.glyco_enz, self.non_gly_gn, self.data)
+                save_zdata(total_gr_zscore, f"Worker {worker_id}")
 
-    def worker_3(self):
-        total_gr_zscore = defaultdict(list)
-        index = 2
-        while index < len(self.glyco_enz):
-            test_gn = []
-            gn = self.glyco_enz[index]
-            if gn not in self.gn_nt_data:
-                print("Worker 3", gn)
-                test_gn.append(gn)
-                total_gr_zscore[("Worker 3", gn)] = single_enz_experiment(test_gn, self.glyco_enz, self.non_gly_gn, self.data)
-                save_zdata(total_gr_zscore, "Worker 3")
-            
-            index += 4
-
-    def worker_4(self):
-        total_gr_zscore = defaultdict(list)
-        index = 3
-        while index <= len(self.glyco_enz):
-            test_gn = []
-            gn = self.glyco_enz[index]
-            if gn not in self.gn_nt_data:
-                print("Worker 4", gn)
-                test_gn.append(gn)
-                total_gr_zscore[("Worker 4", gn)] = single_enz_experiment(test_gn, self.glyco_enz, self.non_gly_gn, self.data)
-                save_zdata(total_gr_zscore, "Worker 4")
-            
-            index += 4
-
-def worker_function(worker_id, glyco_enzymes, non_glyco_genes, merged_data, gns_nt_data):
+def worker_function(worker_id, glyco_enzymes, non_glyco_genes, merged_data, gns_nt_data, queue):
     w = Workers(glyco_enzymes, non_glyco_genes, merged_data, gns_nt_data)
-    if worker_id == 1:
-        w.worker_1()
-    elif worker_id == 2:
-        w.worker_2()
-    elif worker_id == 3:
-        w.worker_3()
-    elif worker_id == 4:
-        w.worker_4()
-
+    w.worker(queue, worker_id)
 
 if __name__ == "__main__":
     glyco_enzymes = glyco_enzymes
     non_glyco_genes = non_glyco_genes
     merged_data = merged_data
     gn_not_indata = gn_not_indata
-    
+
+
+    queue = multiprocessing.Queue()
+    for gn in glyco_enzymes:
+        queue.put(gn)
+
+
     jobs = []
     for i in range(1, 5):
-        p = multiprocessing.Process(target=worker_function, args=(i, glyco_enzymes, non_glyco_genes, merged_data, gn_not_indata))
+        p = multiprocessing.Process(target=worker_function, args=(i, glyco_enzymes, non_glyco_genes, merged_data, gn_not_indata, queue))
         jobs.append(p)
         p.start()
+
 
     for job in jobs:
         job.join()
