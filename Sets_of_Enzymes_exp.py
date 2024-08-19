@@ -1,7 +1,13 @@
 from app import *
 import time
+import configparser
 
 
+config = configparser.ConfigParser()
+config.read('Sets_of_Enzymes_exp_config.ini')
+
+random_test_size = config["Parameters"]["random_test_sample_size"]
+tissue_filename =  config["Parameters"]["save_filename_to"]
 
 HPATissue_file = "HPA_tissue.txt"
 Gspec_file = "proteinatlas.tsv"
@@ -9,7 +15,7 @@ h = HPATissueClassifcation(HPATissue_file, Gspec_file)
 hpa_tis = h.get_HPA_Tissue()
 extracted_dataset, tissues_names = check_for_file(hpa_tis, True)
 
-print(len(extracted_dataset))
+
 
 def print_process(process_name, start_time):
     end_time = time.time()
@@ -19,9 +25,9 @@ def print_process(process_name, start_time):
     return end_time
 
 
-def set_enz_experiment(gene_set, all_enzymes, dataset):     
+def set_enz_experiment(gene_set, all_enzymes, dataset, rts = random_test_size):     
     over_all_start = time.time()
-    cr = create_random_sets(gene_set, dataset, all_enzymes, random_size=20)
+    cr = create_random_sets(gene_set, dataset, all_enzymes, random_size=rts) #rts, check cofiguration file
     precision = 0.9
     col_zscore = {}
     for tissue in tissues_names:
@@ -79,7 +85,7 @@ gn_sets = GeneSet()
 #gn_set1 = gn_sets.extract_glyco_set_at('Fucp', '3', 'a', 'GlcpNAc')  
 all_sets = gn_sets.get_sdbox_data()
 glyco_enzymes = gn_sets.get_all_glyco_enz() 
-r = run(all_sets, glyco_enzymes, extracted_dataset, "test")
+r = run(all_sets, glyco_enzymes, extracted_dataset, tissue_filename)
 
 
 
