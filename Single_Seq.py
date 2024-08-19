@@ -12,6 +12,7 @@ from plots import *
 from sklearn.preprocessing import MaxAbsScaler
 import time, multiprocessing
 from queue import Empty
+import sys
 
 
 
@@ -27,6 +28,10 @@ glyco_enzymes = gn_sets.get_all_glyco_enz()
 non_glyco_set = adata.var.loc[~adata.var_names.isin(glyco_enzymes)]
 non_glyco_genes = non_glyco_set.index
 non_glyco_genes = non_glyco_genes.tolist()
+
+
+
+
 
 
 names = ["Logistic Regression"]
@@ -178,7 +183,6 @@ def ct_name(cell_type_name, single_cts_track=single_cts_track):
     if type(cell_type_name) == tuple:
         if cell_type_name[0] in single_cts_track:
             n_ct = f"{cell_type_name[0]} in [{cell_type_name[1]}]"
-            print(n_ct)
         else:
             n_ct = f"{cell_type_name[0]} in {cell_type_name[1]}"
 
@@ -187,11 +191,6 @@ def ct_name(cell_type_name, single_cts_track=single_cts_track):
 
     return n_ct
 
-
-
-print(len(reduced_cell_types))
-
-print(len(reduced_cell_types))
 
 ### Run this script once to extract Percent Detected and Index Counts per CT type ####
 
@@ -302,6 +301,31 @@ def single_enz_experiment(gene_set, all_enzymes, non_glyco_genes, single_cts_tra
 
 
 
+def number_of_worker(worker_argv):
+    assert "workers_" in worker_argv, "Enter the number of workers, eg. workers_4"
+    n_worker = int(worker_argv.split("_")[1])
+    return n_worker
+
+def num_of_job(job_num_argv):
+    assert "job_" in job_num_argv, "Enter the job number, eg. job_4"
+    n_job = int(job_num_argv.split("_")[1])
+    return n_job
+
+
+def make_job_indices(total_workers,job_number, glyco_en):
+    n_job_ind = []
+    glyco_en = sorted(glyco_en)
+    assert job_number <= total_workers, "Job number exceed the total number of workers"
+    start_index = job_number - 1
+    ln_glyco = len(glyco_en) - 1
+    while start_index < ln_glyco or start_index <= ln_glyco:
+        n_job_ind.append(start_index)
+        start_index += total_workers
+
+    return n_job_ind
+
+
+
 class Workers:
     def __init__(self, glyco_enz, non_genes, data, genes_nt_data):
         self.glyco_enz = sorted(glyco_enz)
@@ -321,30 +345,54 @@ class Workers:
                 print(f"Worker {worker_id}", gn)
                 test_gn = [gn]
                 total_gr_zscore[(f"Worker {worker_id}", gn)] = single_enz_experiment(test_gn, self.glyco_enz, self.non_gly_gn, self.data)
-                save_zdata(total_gr_zscore, f"Worker {worker_id}")
 
-def worker_function(worker_id, glyco_enzymes, non_glyco_genes, merged_data, gns_nt_data, queue):
+        return total_gr_zscore
+    
+def worker_function(worker_id, glyco_enzymes, non_glyco_genes, merged_data, gns_nt_data, queue, result_dict):
     w = Workers(glyco_enzymes, non_glyco_genes, merged_data, gns_nt_data)
-    w.worker(queue, worker_id)
+    result_dict[worker_id] = w.worker(queue, worker_id)
+
+
+
 
 if __name__ == "__main__":
-    glyco_enzymes = glyco_enzymes
-    non_glyco_genes = non_glyco_genes
-    merged_data = merged_data
-    gn_not_indata = gn_not_indata
+    glyco_enzymes = sorted(glyco_enzymes)
+
+    if len(sys.argv) <= 1:
+        raise ValueError("Missing required argument: workers_number")
+    if len(sys.argv) <= 2:
+        raise ValueError("Missing required argument: job_number")
+
+    workers = sys.argv[1]
+    job_number = sys.argv[2]
+
+    w = number_of_worker(workers)
+    j = num_of_job(job_number) 
+    job_indices = make_job_indices(w, j, glyco_enzymes)
 
 
     queue = multiprocessing.Queue()
-    for gn in glyco_enzymes:
-        queue.put(gn)
+    manager = multiprocessing.Manager()
+    result_dict = manager.dict()
+
+
+    for indx in job_indices:
+        queue.put(glyco_enzymes[indx])
 
 
     jobs = []
-    for i in range(1, 5):
-        p = multiprocessing.Process(target=worker_function, args=(i, glyco_enzymes, non_glyco_genes, merged_data, gn_not_indata, queue))
+    for i in range(1, w + 1):
+        p = multiprocessing.Process(target=worker_function, args=(i, glyco_enzymes, non_glyco_genes, merged_data, gn_not_indata, queue, result_dict))
         jobs.append(p)
         p.start()
 
 
     for job in jobs:
         job.join()
+
+    combined_results = {}
+    for result in result_dict.values():
+        for key, value in result.items():
+            combined_results[key] = value 
+
+    save_zdata(combined_results, f"Combined_{job_number}")

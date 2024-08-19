@@ -6,8 +6,15 @@ from imblearn.under_sampling import RandomUnderSampler
 from sklearn.metrics import precision_recall_fscore_support
 import numpy as np
 from plots import * 
+from app import *
+import configparser
 
 
+config = configparser.ConfigParser()
+config.read('Sets_of_Enzymes_exp_config.ini')
+
+recall_precision_at = config["ML Parameters"]["recall_precision_at"]
+xy_test_resampling = config["ML Parameters"]["xy_test_resampling"]
 
   
 def x_y_split(data):
@@ -18,19 +25,19 @@ def x_y_split(data):
     count_class_0 = class_counts[0]
     count_class_1 = class_counts[1]
     strat_split = StratifiedShuffleSplit(n_splits=1, test_size=0.2)
-    #strat_split.split(X,y)[0]
+
     for train_index, test_index in strat_split.split(X, y):
       X_train, X_test = X.iloc[train_index], X.iloc[test_index]
       y_train, y_test = y[train_index], y[test_index]
 
-    #Only for Single_Cell: 
-    #Remove < 10000 count from tissue
-
-    if count_class_1 < 10000:
+    #Applied to both experiment
+    if count_class_1 < 10000: 
       under = RandomUnderSampler(sampling_strategy=0.1)
       X_train, y_train = under.fit_resample(X_train, y_train)
 
+    #Only for Single_Cell:
     #Downsample X_test for single cell
+    
       under = RandomUnderSampler(sampling_strategy=1)
       X_test, y_test = under.fit_resample(X_test, y_test)
   
@@ -99,10 +106,10 @@ class ML_Parameters_Model:
   
 
 #def gen_ml_report(df, ml_names, tissue_name, x_y_split, rm_enz_exp=False):
-def gen_ml_report(df, ml_names, tissue_name, cv_split, rm_enz_exp=False):
+def gen_ml_report(df, ml_names, tissue_name, cv_split, rm_enz_exp=False, recall_precision_at=recall_precision_at):
   
-  #X_train, X_test, y_train, y_test = x_y_split(df)
-  X_train, X_test, y_train, y_test = cv_split(df)
+  X_train, X_test, y_train, y_test = x_y_split(df)
+  #X_train, X_test, y_train, y_test = cv_split(df)
 
   pr_re_dic = {}
   ml_pred_lis = []
@@ -119,7 +126,7 @@ def gen_ml_report(df, ml_names, tissue_name, cv_split, rm_enz_exp=False):
     clasi_m_data = m.classi_map_data()
 
     t = Pre_Recall(recall, interp_precision)
-    re_at_90 = t.precision_at(0.9)
+    re_at_90 = t.precision_at(0.9) #check configuration file
     collect_cdf_score[model_name] = {tissue_name: re_at_90}
 
     ml_pred_lis.append(pr)
