@@ -1,13 +1,22 @@
 from app import *
 import time
-import configparser
+import configparser, argparse
 
+
+parser = argparse.ArgumentParser(description='Process output filename')
+parser.add_argument('-f', "--filename", metavar='output filename', type=str, required=True,
+                    help='name of the output file')
+
+args = parser.parse_args()
+tissue_filename = args.f
+
+print(tissue_filename)
 
 config = configparser.ConfigParser()
 config.read('Sets_of_Enzymes_exp_config.ini')
 
 random_test_size = config["Parameters"]["random_test_sample_size"]
-tissue_filename =  config["Parameters"]["save_filename_to"]
+
 
 HPATissue_file = "HPA_tissue.txt"
 Gspec_file = "proteinatlas.tsv"

@@ -54,7 +54,7 @@ Glycosylation-Related Enzyme Expression Toolkit
 
 # Plots.py
 1. Precision-Recall Curve Analysis:
-    # Pre_Recall: 
+    ### Pre_Recall: 
     This class handles precision-recall data and provides methods for calculating interpolated precision, plotting different types of precision-recall curves, and filtering the data based on recall or precision thresholds.
 
 2. Visualization Functions:
@@ -70,7 +70,7 @@ Glycosylation-Related Enzyme Expression Toolkit
     * z_table: Generates and prints a table of Z-scores and recall scores filtered by specific criteria.
 
 
-# ML_Parameters
+# ML_Parameters.py
 1. Data Splitting Functions
     ### x_y_split(data)
         Purpose: Splits the dataset into training and testing sets while handling class imbalance.
@@ -128,18 +128,17 @@ Glycosylation-Related Enzyme Expression Toolkit
                 # Returns: Formatted string summarizing cross-validation results.
 
 3. Reporting Function
-    ### gen_ml_report(df, ml_names, tissue_name, cv_split, rm_enz_exp=False, recall_precision_at=recall_precision_at)
+    ### gen_ml_report(df, ml_names, tissue_name, rm_enz_exp=False, recall_precision_at=recall_precision_at)
         Purpose: Automates the process of training multiple models and collecting their performance metrics.
         Parameters:
             * df: The dataset to be used.
             * ml_names: Dictionary mapping model names to their instances.
-            * tissue_name: Identifier for the specific tissue or condition being analyzed.
-            * cv_split: Function used to split the data (e.g., x_y_split or cv_split).
+            * tissue_name: Identifier for the specific tissue or condition being analyzed.s
             * rm_enz_exp (optional): Boolean flag indicating whether to remove the least significant feature based on coefficients.
             * recall_precision_at (optional): Threshold for precision or recall, possibly loaded from a configuration file.
 
         Process:
-            * Data Splitting: Uses the provided cv_split function to partition data.
+            * Data splitting: Function used to split the data (e.g., x_y_split or cv_split).
             * Model Training and Evaluation:
             * Iterates over each model in ml_names.
             * Trains and evaluates each model using ML_Parameters_Model.
@@ -150,7 +149,14 @@ Glycosylation-Related Enzyme Expression Toolkit
                 # Optionally identifies and records the least significant feature to be removed.
                 
             * Result Compilation: Stores collected metrics in dictionaries for further analysis or visualization.
-            
+
         Returns:
             * If rm_enz_exp is False: Dictionaries containing precision-recall data and recall at specified precision thresholds.
             * If rm_enz_exp is True: Same as above, plus the name of the least significant feature to be potentially removed.
+
+
+# app.py
+1. Defining Classifiers
+    *   Purpose: This snippet defines a list of machine learning model names and corresponding classifier objects. It then maps each model name to its classifier using a dictionary ml_names_classi.
+    *   Usage: This is useful for initializing and organizing multiple models that will be used in the analysis pipeline.
+

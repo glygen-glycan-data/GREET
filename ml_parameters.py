@@ -7,17 +7,19 @@ from sklearn.metrics import precision_recall_fscore_support
 import numpy as np
 from plots import * 
 from app import *
-import configparser
+import configparser, sys
 
 
 config = configparser.ConfigParser()
-config.read('Sets_of_Enzymes_exp_config.ini')
+config.read(sys.argv[1])
+
 
 recall_precision_at = config["ML Parameters"]["recall_precision_at"]
-xy_test_resampling = config["ML Parameters"]["xy_test_resampling"]
+train_under_sample = config["ML Parameters"]["train_under_sample"]
+test_under_sample = config["ML Parameters"]["test_under_sample"]
 
-  
-def x_y_split(data):
+
+def x_y_split(data, tr_un_sam=train_under_sample, test_un_sam= test_under_sample):
     X = data.drop(['Class'], axis = 1)
     y = np.array(data["Class"])
     class_counts = np.bincount(y)
@@ -31,14 +33,14 @@ def x_y_split(data):
       y_train, y_test = y[train_index], y[test_index]
 
     #Applied to both experiment
-    if count_class_1 < 10000: 
-      under = RandomUnderSampler(sampling_strategy=0.1)
+    if count_class_1 < 10000:  # this number is applied for bug issue when undersampling in single seq experiment 
+      under = RandomUnderSampler(sampling_strategy=tr_un_sam)
       X_train, y_train = under.fit_resample(X_train, y_train)
 
     #Only for Single_Cell:
     #Downsample X_test for single cell
     
-      under = RandomUnderSampler(sampling_strategy=1)
+      under = RandomUnderSampler(sampling_strategy=test_un_sam)
       X_test, y_test = under.fit_resample(X_test, y_test)
   
     return X_train, X_test, y_train, y_test
@@ -106,7 +108,7 @@ class ML_Parameters_Model:
   
 
 #def gen_ml_report(df, ml_names, tissue_name, x_y_split, rm_enz_exp=False):
-def gen_ml_report(df, ml_names, tissue_name, cv_split, rm_enz_exp=False, recall_precision_at=recall_precision_at):
+def gen_ml_report(df, ml_names, tissue_name, rm_enz_exp=False, recall_precision_at=recall_precision_at, re_pr_at= recall_precision_at):
   
   X_train, X_test, y_train, y_test = x_y_split(df)
   #X_train, X_test, y_train, y_test = cv_split(df)
@@ -119,14 +121,14 @@ def gen_ml_report(df, ml_names, tissue_name, cv_split, rm_enz_exp=False, recall_
   tissue_pr_re = {}
   for model_name, model in ml_names.items():
     m = ML_Parameters_Model(df, model_name, model, X_train, X_test, y_train, y_test)
-    pr = m.set_up()
-    #print(classification_report(y_test, pr))
+    predict_values = m.set_up()
+    #print(classification_report(y_test, predict_values))
     auc_val = m.auc_val()
     precision, recall, interp_precision = m.pr_curve()
     clasi_m_data = m.classi_map_data()
 
     t = Pre_Recall(recall, interp_precision)
-    re_at_90 = t.precision_at(0.9) #check configuration file
+    re_at_90 = t.precision_at(re_pr_at) #check configuration file
     collect_cdf_score[model_name] = {tissue_name: re_at_90}
 
     ml_pred_lis.append(pr)

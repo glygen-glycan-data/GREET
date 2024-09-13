@@ -6,7 +6,14 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from scipy import stats
 import warnings
-import statistics, math
+import statistics, math, configparser
+
+
+config = configparser.ConfigParser()
+config.read(sys.argv[1])
+
+
+sd_threshold = config["Z Score"]["sd_less_than_threshold"]
 
 
 # Ignore all warnings
@@ -120,7 +127,7 @@ class RecallScore:
   
 
 class Scores:
-  def __init__(self, cdf_data):
+  def __init__(self, cdf_data, sd_threshold = sd_threshold):
     self.cdf_scores = cdf_data
 
   def extract_std(self):
@@ -136,9 +143,9 @@ class Scores:
       u = statistics.mean(values[:-1])
       std = np.std(values[:-1])
       old_std = ""
-      if std <= 0.1:
+      if std <= sd_threshold:
         old_std = std
-        std = 0.1
+        std = sd_threshold
       
       z = (values[-1] - u)/std
       z_data[k].append((z, values[-1], u, std, old_std, values[:-1]))

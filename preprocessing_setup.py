@@ -5,6 +5,18 @@ import numpy as np
 import os, sys, re
 
 
+import configparser
+
+
+config = configparser.ConfigParser()
+config.read(sys.argv[1])
+
+tis_threshold = config["Preprocessing"]["threshold_count"]
+if "Sets_of_Enzymes_exp" in sys.argv[1]:
+  ngg_temp_file = config["Preprocessing"]["random_gene_set_size"]
+  print(ngg_temp_file)
+else:
+  ngg_temp_file = ""
 
 class GeneSet():
     sandbox_url = "https://edwardslab.bmcb.georgetown.edu/sandboxdev/api/getEnzymeMappings.php?limiter=no_filter&val="   
@@ -44,7 +56,7 @@ class GeneSet():
     
     def extract_glyco_set_at(self, group_name):   
       group_df = self.enzymes_dict_set.get(group_name)
-      return  group_df
+      return group_df
     
 
 
@@ -78,7 +90,7 @@ class FileStatus:
     
     return sorted(self.tis_names)
 
-  def extract_file_data(self, hpa_tissue=None, hpa_annotations=False):
+  def extract_file_data(self, hpa_tissue=None, hpa_annotations=False, tissue_threshold = tis_threshold):
     data = {}
     for gn, tis_val in self.temp_data.items():
       tissue_collection = defaultdict(list)
@@ -104,7 +116,7 @@ class FileStatus:
       if total_num_sample == 17382:
         for tissue in self.tis_names:
           len_t = len(tissue_collection.get(tissue))
-          if len_t < 100:
+          if len_t < tissue_threshold: # check configuration file
             tissue_collection.pop(tissue)
 
           else:
@@ -170,7 +182,7 @@ def samples(url):
 
     return samples_names
 
-def extracting_data(extract_enzymes_tup, samples_names):
+def extracting_data(extract_enzymes_tup, samples_names, random_non_glyco_genes= ngg_temp_file):
   dataset = ["prostate", "whole_blood", "vagina", "uterus", "thyroid", "testis", "stomach", "spleen", "small_intestine_terminal_ileum", "skin_sun_exposed_lower_leg", "skin_not_sun_exposed_suprapubic", "pancreas", "pituitary", "ovary", "nerve_tibial", "muscle_skeletal", "minor_salivary_gland",
            "lung", "kidney_cortex", "kidney_medulla", "heart_left_ventricle", "heart_atrial_appendage", "fallopian_tube", "esophagus_gastroesophageal_junction", "esophagus_mucosa", "esophagus_muscularis", "colon_sigmoid", "colon_transverse",
            "cervix_ectocervix", "cervix_endocervix", "cells_cultured_fibroblasts", "cells_ebv-transformed_lymphocytes", "breast_mammary_tissue", "brain_amygdala", "brain_anterior_cingulate_cortex_ba24", "brain_caudate_basal_ganglia", "brain_cerebellar_hemisphere", "brain_cerebellum", "brain_cortex",
@@ -192,7 +204,7 @@ def extracting_data(extract_enzymes_tup, samples_names):
           row_dict = dict(zip(column_names, values))
           gene_name = row_dict.get("Description")
           en_id  = row_dict.get("Name")
-          if gene_name in extract_enzymes_tup or len(non_glyco_enzymes) <= 5000:
+          if gene_name in extract_enzymes_tup or len(non_glyco_enzymes) <= random_non_glyco_genes: #check config file
             if gene_name not in extract_enzymes_tup:
               non_glyco_enzymes.add(gene_name)
             for tissue, samp in samples_names.items():
@@ -305,46 +317,4 @@ def check_for_file(hpa_tissue=None, return_hpa=False):
 #print(data)
 
 
-
-
-
-
-"""
-def reading_file_in(path):
-  tis_names = set()
-  temp_data = defaultdict(list)
-  data = {}
-  with open(path, "r") as file:
-    dict_reader = csv.DictReader(file, delimiter="\t")
-    for row in dict_reader:
-      temp_data[row["Gene"]].append((row["Tissue"], float(row["Value"])))
-  
-
-  for gn, tis_val in temp_data.items():
-    tissue_collection = defaultdict(list)
-    for t_v in tis_val:
-      tissue_collection[t_v[0]].append(t_v[1])
-  
-  
-    total_num_sample = 0
-    reduced_tissue_collection = {}
-    for tissue, values in tissue_collection.items():
-      if len(values) >= 100:
-        reduced_tissue_collection[tissue] = values
-        print(tissue, len(values))
-        tis_names.add(tissue)
-        total_num_sample += len(values)
-      else:
-        print(tissue, len(values))
-
-    
-
-    print(len(tis_names))
-    print(total_num_sample)
-    if total_num_sample == 17382:
-      data[gn] = tissue_collection
-  
-  return data, sorted(tis_names)
-
-  """
 

@@ -1,4 +1,3 @@
-
 import scanpy as sc 
 from app import GeneSet
 import pandas as pd  
@@ -12,14 +11,29 @@ from plots import *
 from sklearn.preprocessing import MaxAbsScaler
 import time, multiprocessing
 from queue import Empty
-import sys
+import sys, argparse, os, configparser
 
 
 
+config = configparser.ConfigParser()
 
-url = "https://storage.googleapis.com/adult-gtex/single-cell/v9/snrna-seq-data/GTEx_8_tissues_snRNAseq_atlas_071421.public_obs.h5ad"
-file = "data/GTEx_8_tissues_snRNAseq_atlas_071421.public_obs.h5ad"
-adata = sc.read_h5ad(file)
+assert len(sys.argv) > 1, "No file path provided in command line arguments."
+
+#check if the first file is .ini config file 
+assert sys.argv[1].endswith(".ini"), f"{sys.argv[1]} does not end with .ini"
+assert sys.argv[2].endswith(".h5ad"), f"{sys.argv[2]} data file not does not end with h5ad"
+
+config.read(sys.argv[1])
+datafile = sys.argv[2]
+
+cell_threshold_count = config["Preprocessing"]["threshold_count"]
+
+
+
+#url = "https://storage.googleapis.com/adult-gtex/single-cell/v9/snrna-seq-data/GTEx_8_tissues_snRNAseq_atlas_071421.public_obs.h5ad"
+#file = "data/GTEx_8_tissues_snRNAseq_atlas_071421.public_obs.h5ad"
+
+adata = sc.read_h5ad(datafile)
 
 gn_sets = GeneSet()
 all_sets = gn_sets.get_sdbox_data()
@@ -137,7 +151,7 @@ for gn_set in all_sets:
 
 
 
-def find_ct_less_100(m_df, unique_ind):
+def find_ct_less_100(m_df, unique_ind, ctc=cell_threshold_count):
     ct_less_100 = []
     updated_cell_types = []
     ct_types_counts = {}
@@ -163,7 +177,7 @@ def find_ct_less_100(m_df, unique_ind):
             ct_less_100.append(ct)
             single_ct_track.append(ct)
 
-        elif count_class_1 < 200:
+        elif count_class_1 < ctc: #check config file
             ct_less_100.append(ct)
         elif ct == "Unknown":
             ct_less_100.append(ct)
@@ -299,19 +313,6 @@ def single_enz_experiment(gene_set, all_enzymes, non_glyco_genes, single_cts_tra
 
 
 
-
-
-def number_of_worker(worker_argv):
-    assert "workers_" in worker_argv, "Enter the number of workers, eg. workers_4"
-    n_worker = int(worker_argv.split("_")[1])
-    return n_worker
-
-def num_of_job(job_num_argv):
-    assert "job_" in job_num_argv, "Enter the job number, eg. job_4"
-    n_job = int(job_num_argv.split("_")[1])
-    return n_job
-
-
 def make_job_indices(total_workers,job_number, glyco_en):
     n_job_ind = []
     glyco_en = sorted(glyco_en)
@@ -356,20 +357,43 @@ def worker_function(worker_id, glyco_enzymes, non_glyco_genes, merged_data, gns_
 
 
 if __name__ == "__main__":
+
+    
+    cpuCount = os.cpu_count()
+    print("Number of CPUs in the system:", cpuCount, "\n")
+
     glyco_enzymes = sorted(glyco_enzymes)
 
-    if len(sys.argv) <= 1:
-        raise ValueError("Missing required argument: workers_number")
-    if len(sys.argv) <= 2:
-        raise ValueError("Missing required argument: job_number")
+    parser = argparse.ArgumentParser(description='Process some Args.')
 
-    workers = sys.argv[1]
-    job_number = sys.argv[2]
+    parser.add_argument('-w', "--workers", metavar='Number of Workers', type=int, required=True,
+                    help='an integer for the number of workers')
 
-    w = number_of_worker(workers)
-    j = num_of_job(job_number) 
+    parser.add_argument('-n', "--nworker", metavar='nworkers', type=int, required=True,
+                    help='an integer for the job number')
+
+    parser.add_argument('-p', "--processors", metavar='Number of processor', type=int,
+                    help='an integer for the number of processors')
+
+
+    args = parser.parse_args()
+
+
+    w = args.w
+    j = args.n
+
+    if args.p:
+        p = args.p
+    else:
+        p = cpuCount
+        
+
+    print(f"Number of Workers: {args.w}")
+    print(f"Job Number: {args.n}")
+    print(f"Number of Processors: {args.p}")
+
     job_indices = make_job_indices(w, j, glyco_enzymes)
-
+    print(job_indices)
 
     queue = multiprocessing.Queue()
     manager = multiprocessing.Manager()
@@ -381,7 +405,7 @@ if __name__ == "__main__":
 
 
     jobs = []
-    for i in range(1, w + 1):
+    for i in range(1, p + 1):
         p = multiprocessing.Process(target=worker_function, args=(i, glyco_enzymes, non_glyco_genes, merged_data, gn_not_indata, queue, result_dict))
         jobs.append(p)
         p.start()
