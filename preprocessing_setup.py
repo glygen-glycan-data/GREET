@@ -1,22 +1,10 @@
 from GTExData import *
+from config import *
 from collections import defaultdict
 import csv, gzip, urllib.request, json, io, random
 import numpy as np
 import os, sys, re
 
-
-import configparser
-
-
-config = configparser.ConfigParser()
-config.read(sys.argv[1])
-
-tis_threshold = config["Preprocessing"]["threshold_count"]
-if "Sets_of_Enzymes_exp" in sys.argv[1]:
-  ngg_temp_file = config["Preprocessing"]["random_gene_set_size"]
-  print(ngg_temp_file)
-else:
-  ngg_temp_file = ""
 
 class GeneSet():
     sandbox_url = "https://edwardslab.bmcb.georgetown.edu/sandboxdev/api/getEnzymeMappings.php?limiter=no_filter&val="   
@@ -290,7 +278,7 @@ def assign_class(tissue_headers, tissue_name):
 
 
 def check_for_file(hpa_tissue=None, return_hpa=False):
-  file_path = "data/temp_data_test.csv"
+  file_path = "data/temp_data.csv"
   sam_url = "https://storage.googleapis.com/adult-gtex/annotations/v8/metadata-files/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt"
   fs = FileStatus(file_path)
 

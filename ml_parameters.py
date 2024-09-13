@@ -7,16 +7,7 @@ from sklearn.metrics import precision_recall_fscore_support
 import numpy as np
 from plots import * 
 from app import *
-import configparser, sys
-
-
-config = configparser.ConfigParser()
-config.read(sys.argv[1])
-
-
-recall_precision_at = config["ML Parameters"]["recall_precision_at"]
-train_under_sample = config["ML Parameters"]["train_under_sample"]
-test_under_sample = config["ML Parameters"]["test_under_sample"]
+from config import *
 
 
 def x_y_split(data, tr_un_sam=train_under_sample, test_un_sam= test_under_sample):
@@ -39,9 +30,9 @@ def x_y_split(data, tr_un_sam=train_under_sample, test_un_sam= test_under_sample
 
     #Only for Single_Cell:
     #Downsample X_test for single cell
-    
-      under = RandomUnderSampler(sampling_strategy=test_un_sam)
-      X_test, y_test = under.fit_resample(X_test, y_test)
+      if test_un_sam > 0:
+        under = RandomUnderSampler(sampling_strategy=test_un_sam)
+        X_test, y_test = under.fit_resample(X_test, y_test)
   
     return X_train, X_test, y_train, y_test
 
@@ -108,7 +99,7 @@ class ML_Parameters_Model:
   
 
 #def gen_ml_report(df, ml_names, tissue_name, x_y_split, rm_enz_exp=False):
-def gen_ml_report(df, ml_names, tissue_name, rm_enz_exp=False, recall_precision_at=recall_precision_at, re_pr_at= recall_precision_at):
+def gen_ml_report(df, ml_names, tissue_name, re_pr_at= recall_precision_at, rm_enz_exp=False):
   
   X_train, X_test, y_train, y_test = x_y_split(df)
   #X_train, X_test, y_train, y_test = cv_split(df)

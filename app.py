@@ -1,6 +1,7 @@
 from ml_parameters import *
 from plots import *
 from preprocessing_setup import *
+from config import *
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
@@ -8,12 +9,6 @@ from scipy import stats
 import warnings
 import statistics, math, configparser
 
-
-config = configparser.ConfigParser()
-config.read(sys.argv[1])
-
-
-sd_threshold = config["Z Score"]["sd_less_than_threshold"]
 
 
 # Ignore all warnings

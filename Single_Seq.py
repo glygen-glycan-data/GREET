@@ -11,22 +11,7 @@ from plots import *
 from sklearn.preprocessing import MaxAbsScaler
 import time, multiprocessing
 from queue import Empty
-import sys, argparse, os, configparser
-
-
-
-config = configparser.ConfigParser()
-
-assert len(sys.argv) > 1, "No file path provided in command line arguments."
-
-#check if the first file is .ini config file 
-assert sys.argv[1].endswith(".ini"), f"{sys.argv[1]} does not end with .ini"
-assert sys.argv[2].endswith(".h5ad"), f"{sys.argv[2]} data file not does not end with h5ad"
-
-config.read(sys.argv[1])
-datafile = sys.argv[2]
-
-cell_threshold_count = config["Preprocessing"]["threshold_count"]
+import os, argparse
 
 
 
@@ -358,39 +343,24 @@ def worker_function(worker_id, glyco_enzymes, non_glyco_genes, merged_data, gns_
 
 if __name__ == "__main__":
 
-    
     cpuCount = os.cpu_count()
     print("Number of CPUs in the system:", cpuCount, "\n")
 
     glyco_enzymes = sorted(glyco_enzymes)
 
-    parser = argparse.ArgumentParser(description='Process some Args.')
+    if not (args.workers and args.nworker):
+        parser.print_help()  # Print help message
+        raise AssertionError(f"{args.workers} Workers and {args.nworker} nworkers argument is required")
 
-    parser.add_argument('-w', "--workers", metavar='Number of Workers', type=int, required=True,
-                    help='an integer for the number of workers')
-
-    parser.add_argument('-n', "--nworker", metavar='nworkers', type=int, required=True,
-                    help='an integer for the job number')
-
-    parser.add_argument('-p', "--processors", metavar='Number of processor', type=int,
-                    help='an integer for the number of processors')
-
-
-    args = parser.parse_args()
-
-
-    w = args.w
-    j = args.n
-
-    if args.p:
-        p = args.p
+    if args.processors:
+        p = args.processors
     else:
         p = cpuCount
         
 
-    print(f"Number of Workers: {args.w}")
-    print(f"Job Number: {args.n}")
-    print(f"Number of Processors: {args.p}")
+    print(f"Number of Workers: {args.workers}")
+    print(f"Job Number: {args.nworker}")
+    print(f"Number of Processors: {p}")
 
     job_indices = make_job_indices(w, j, glyco_enzymes)
     print(job_indices)
@@ -419,4 +389,4 @@ if __name__ == "__main__":
         for key, value in result.items():
             combined_results[key] = value 
 
-    save_zdata(combined_results, f"Combined_{job_number}")
+    save_zdata(combined_results, f"Combined_{args.filename}")
