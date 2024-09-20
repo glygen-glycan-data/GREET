@@ -261,7 +261,6 @@ def experiment(gene_set, all_enzymes, dataset, index_set, experiment_type = exp_
                 glyco_enz_set_data.reset() 
 
             elif experiment_type == "Cell":
-                print("This is cell experiment", ind)
                 gnt = make_df(ext_enz_set)
                 
                 if type(ind) == tuple:
