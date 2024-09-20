@@ -38,13 +38,6 @@ for i in range(len(names)):
   ml_names_classi[names[i]] = classifiers[i]
 
 
-def print_process(process_name, start_time):
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    timestamp = time.strftime("%H:%M:%S", time.localtime(end_time))
-    print(f"{timestamp}: {process_name} - Elapsed time: {elapsed_time:.2f} seconds")
-    return end_time
-
 
 def reduce_df(data, enz_set):
     modified_reduced_df = {}

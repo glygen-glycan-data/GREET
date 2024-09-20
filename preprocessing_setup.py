@@ -279,7 +279,7 @@ def assign_class(tissue_headers, tissue_name):
 
 
 def check_for_file(hpa_tissue=None, return_hpa=False, datafilename=datafile):
-  file_path = datafilename
+  file_path = datafilename + ".csv"
   sam_url = "https://storage.googleapis.com/adult-gtex/annotations/v8/metadata-files/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt"
   fs = FileStatus(file_path)
 

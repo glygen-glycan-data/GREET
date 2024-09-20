@@ -6,13 +6,23 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from scipy import stats
-import warnings
+import warnings, time
 import statistics, math, configparser
 
 
 
 # Ignore all warnings
 warnings.filterwarnings("ignore")
+
+def print_process(process_name, start_time):
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    timestamp = time.strftime("%H:%M:%S", time.localtime(end_time))
+    print(f"{timestamp}: {process_name} - Elapsed time: {elapsed_time:.2f} seconds")
+    return end_time
+
+
+
 
 
 #names = ["LR L1"] #["Logistic Regression"],  'Modified LR L1', "KNN"] # 'QDA']
