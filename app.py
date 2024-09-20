@@ -102,13 +102,14 @@ class Report:
     
   def execute_report(self, enz_set_num, ml_names, rm_exp=False):
     if rm_exp == True:
-      collect_pr_re_dic, collect_cdf, drop_key = gen_ml_report(self.gn_dataset, ml_names, enz_set_num, x_y_split, rm_enz_exp=rm_exp)
+      collect_pr_re_dic, collect_cdf, drop_key = gen_ml_report(self.gn_dataset, ml_names, enz_set_num, rm_enz_exp=rm_exp)
       self.gn_dataset = self.gn_dataset.drop(columns=[drop_key])
       print(enz_set_num, drop_key)
       return collect_pr_re_dic, collect_cdf
   
     else:
-      collect_pr_re_dic, collect_cdf = gen_ml_report(self.gn_dataset, ml_names, enz_set_num, x_y_split, rm_enz_exp=rm_exp)
+      #check configuration file 
+      collect_pr_re_dic, collect_cdf = gen_ml_report(self.gn_dataset, ml_names, enz_set_num, cpr_at=recall_precision_threshold, rm_enz_exp=rm_exp)
       return collect_pr_re_dic, collect_cdf
 
 

@@ -95,10 +95,8 @@ class ML_Parameters_Model:
     v_result = (f"K-fold: %0.2f (+/- %0.2f)" % (v_score.mean(), v_score.std() * 2))
     return v_result
 
-  
 
-#def gen_ml_report(df, ml_names, tissue_name, x_y_split, rm_enz_exp=False):
-def gen_ml_report(df, ml_names, tissue_name, cpr_at=recall_precision_threshold, rm_enz_exp=False):
+def gen_ml_report(df, ml_names, tissue_name, cpr_at, rm_enz_exp=False):
   
   X_train, X_test, y_train, y_test = x_y_split(df)
   #X_train, X_test, y_train, y_test = cv_split(df)
@@ -118,8 +116,7 @@ def gen_ml_report(df, ml_names, tissue_name, cpr_at=recall_precision_threshold, 
     clasi_m_data = m.classi_map_data()
 
     t = Pre_Recall(recall, interp_precision)
-    #print("Precision", type((cpr_at)), cpr_at)
-    re_at_90 = t.precision_at(0.9) #check configuration file
+    re_at_90 = t.precision_at(cpr_at) #check configuration file, recall_precision_threshold variable
     collect_cdf_score[model_name] = {tissue_name: re_at_90}
 
     ml_pred_lis.append(predict_values)
@@ -135,6 +132,7 @@ def gen_ml_report(df, ml_names, tissue_name, cpr_at=recall_precision_threshold, 
       print(srt.keys())
       print(srt.values())
 
+  #uncommented them to produce different graphs 
 
   #heatmap_class_report(classification_data, tissue_name)
   #tissue_figure('Interp', tissue_pr_re, Pre_Recall,tissue_name)

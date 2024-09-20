@@ -13,7 +13,7 @@ parser.add_argument('-c', "--config", metavar='config_file', type=str, required=
 parser.add_argument('-d', "--datafile", metavar='data_file', type=str, required=True,
                     help='Path to the data file')
 
-parser.add_argument('-w', "--workers", metavar='Number of Workers', type=int,
+parser.add_argument('-w', "--workers", metavar='Number of Splits among the Workers', type=int,
                     help='an integer for the number of workers')
 
 parser.add_argument('-n', "--nworker", metavar='nworkers', type=int,

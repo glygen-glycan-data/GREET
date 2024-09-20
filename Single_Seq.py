@@ -242,51 +242,6 @@ with open(full_path, 'w', newline='') as csvfile:
 """
 
 #print(gn_not_indata)
-#old Experiment run
-
-def single_enz_experiment(gene_set, all_enzymes, non_glyco_genes, single_cts_track):     
-    over_all_start = time.time()
-    cr = create_random_sets(gene_set, non_glyco_genes, all_enzymes, random_size=20)
-    precision = 0.9
-    col_zscore = {}
-    for ct in reduced_cell_types[0:2]:
-        ml_score = RecallScore()
-        for rand_num, ext_enz_set in cr.items():
-            gnt = make_df(ext_enz_set)
-            if type(ct) == tuple:
-                gnt["Class"] = (gnt.index == ct).astype(int)
-
-            
-            else:
-                index_flat = gnt.index.map(lambda x: " ".join(map(str,x)))
-                gnt["Class"] = index_flat.str.contains(ct, regex=False)
-
-
-            re = Report(gnt)
-            pr_dic_scores, cdf_scores = re.execute_report(rand_num, ml_names_classi)
-            cdf = ml_score.extract_cdf_scores(cdf_scores)
-            pr = ml_score.extract_pr_scores(pr_dic_scores)
-
-
-
-        name_ct = ct_name(ct)
-        if cdf:
-            sc = Scores(cdf)    
-            col_zscore[name_ct] = sc.extract_zscore()
-        
-
-            #plots = PRplots(cdf, pr, precision, plt_show=True, plt_save=False)
-            #plots.normalized_plt()
-            #plots.box_plt()
-            #plots.cdf_plt()
-            #plots.histo_plt()
-        
-
-    #z_plot(col_zscore, plt_show=False, plt_save=False, title=gene_set)
-    print_process("Whole Set", over_all_start)
-    return col_zscore
-
-
 
 def experiment(gene_set, all_enzymes, dataset, index_set, experiment_type = exp_type,  rts = random_test_size, rpa=recall_precision_threshold):     
     over_all_start = time.time()
@@ -306,7 +261,7 @@ def experiment(gene_set, all_enzymes, dataset, index_set, experiment_type = exp_
                 glyco_enz_set_data.reset() 
 
             elif experiment_type == "Cell":
-                print("This is cell experiment")
+                print("This is cell experiment", ind)
                 gnt = make_df(ext_enz_set)
                 
                 if type(ind) == tuple:
@@ -316,7 +271,7 @@ def experiment(gene_set, all_enzymes, dataset, index_set, experiment_type = exp_
                     index_flat = gnt.index.map(lambda x: " ".join(map(str,x)))
                     gnt["Class"] = index_flat.str.contains(ind, regex=False)
                     
-                ind = ct_name(ind) #renaming indices 
+                re_ind = ct_name(ind) #renaming indices 
                 
 
             re = Report(gnt)
@@ -326,8 +281,10 @@ def experiment(gene_set, all_enzymes, dataset, index_set, experiment_type = exp_
 
         if cdf:
             sc = Scores(cdf)
-            col_zscore[ind] = sc.extract_zscore()
-  
+            if experiment_type == "Cell":
+                col_zscore[re_ind] = sc.extract_zscore()
+            else:
+                col_zscore[ind] = sc.extract_zscore()
 
         #plots = PRplots(cdf, pr, precision, plt_show=False, plt_save=False)
         #plots.normalized_plt()
@@ -377,8 +334,8 @@ class Workers:
             if gn not in self.gn_nt_data:
                 print(f"Worker {worker_id}", gn)
                 test_gn = [gn]
-                total_gr_zscore[(f"Worker {worker_id}", gn)] = single_enz_experiment(test_gn, self.glyco_enz, self.non_gly_gn, self.data)
-                #total_gr_zscore[(f"Worker {worker_id}", gn)] = experiment(test_gn, self.glyco_enz, self.non_gly_gn, index_set = self.ct_names)
+                #total_gr_zscore[(f"Worker {worker_id}", gn)] = single_enz_experiment(test_gn, self.glyco_enz, self.non_gly_gn, self.data)
+                total_gr_zscore[(f"Worker {worker_id}", gn)] = experiment(test_gn, self.glyco_enz, self.non_gly_gn, index_set = self.ct_names)
 
         return total_gr_zscore
     
@@ -441,3 +398,5 @@ if __name__ == "__main__":
             combined_results[key] = value 
 
     save_zdata(combined_results, f"Combined_{args.filename}")
+
+

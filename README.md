@@ -181,15 +181,20 @@ Glycosylation-Related Enzyme Expression Toolkit
             
             3. -p, --processors: uses the number of cpu's of computer to run the experiment. Default is set to use maximum.  
 
+        e. Function run supports grouped based experiment, and Multprocess supports single enzyme based experiment. (see tissue_exp.py)
+
 2. Usage:
     a. Tissue experiment depends on GTEx dataset 
     b. Produces Z-scores, Standard Deviation, mean for various glyco enzymes and n random size. 
+
+
 
 # single_seq.py
 1. Step:
     a.  Expects 3 args:
         1. -f: output_file name
         2. -d: name of datafile that would be used, i.e GTEx single_Seq
+        Before runing this single_seq.py, run ./data/dl.sh to download GTEx data file from website, or download manually
         3. -c: config file for tisssu experiment 
     
     b. Parses datafile as it is in Sparse_matrix and creates and pandas dataframe (merged_data)

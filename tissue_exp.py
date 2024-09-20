@@ -12,46 +12,6 @@ hpa_tis = h.get_HPA_Tissue()
 extracted_dataset, tissues_names = check_for_file(hpa_tis, True)
 
 
-"""
-def set_enz_experiment(gene_set, all_enzymes, dataset, rts = random_test_size, rpa=recall_precision_at):     
-    over_all_start = time.time()
-    cr = create_random_sets(gene_set, dataset, all_enzymes, random_size=rts) #rts, check cofiguration file
-    precision = rpa #rta, check cofiguration file
-    col_zscore = {}
-    for tissue in tissues_names:
-        start_time = time.time()
-        ml_score = RecallScore()
-        for rand_num, ext_enz_set in cr.items():
-            glyco_enz_set_data = EnzymeData(dataset, ext_enz_set)        
-            glyco_enz_set_data.add_parameters(tissue)
-            gnt = glyco_enz_set_data.get_gen_dataset() 
-            glyco_enz_set_data.reset() 
-            re = Report(gnt)
-            pr_dic_scores, cdf_scores = re.execute_report(rand_num, ml_names_classi)
-            cdf = ml_score.extract_cdf_scores(cdf_scores)
-            pr = ml_score.extract_pr_scores(pr_dic_scores)
-            
-        sc = Scores(cdf)
-        col_zscore[tissue] = sc.extract_zscore()
-
-
-        #plots = PRplots(cdf, pr, precision, plt_show=False, plt_save=False)
-        #plots.normalized_plt()
-        #plots.box_plt()
-        #plots.cdf_plt()
-        #plots.histo_plt()
-        #print_process(tissue, start_time)
-        
-    
-    #z_plot(col_zscore, plt_show=False, plt_save=False, title=gene_set)
-    print_process("Whole Set", over_all_start)
-    return col_zscore
-
-
-"""
-
-
-
 
 def experiment(gene_set, all_enzymes, dataset, index_set, experiment_type = exp_type,  rts = random_test_size, rpa=recall_precision_threshold):     
     over_all_start = time.time()
@@ -60,8 +20,7 @@ def experiment(gene_set, all_enzymes, dataset, index_set, experiment_type = exp_
     col_zscore = {}
 
     # i.e index are tissue_names in tissue experiment, and cell_types in cell experiemnt
-    for ind in index_set[0:2]: 
-        print(ind)
+    for ind in index_set: 
         ml_score = RecallScore()
     
         for rand_num, ext_enz_set in cr.items():
@@ -82,8 +41,9 @@ def experiment(gene_set, all_enzymes, dataset, index_set, experiment_type = exp_
                     index_flat = gnt.index.map(lambda x: " ".join(map(str,x)))
                     gnt["Class"] = index_flat.str.contains(ind, regex=False)
                     
-                ind = ct_name(ind) #renaming indices 
-
+                
+                re_ind = ct_name(ind) #renaming indices 
+                
 
             re = Report(gnt)
             pr_dic_scores, cdf_scores = re.execute_report(rand_num, ml_names_classi)
@@ -92,7 +52,10 @@ def experiment(gene_set, all_enzymes, dataset, index_set, experiment_type = exp_
 
         if cdf:
             sc = Scores(cdf)
-            col_zscore[ind] = sc.extract_zscore()
+            if experiment_type == "Cell":
+                col_zscore[re_ind] = sc.extract_zscore()
+            else:
+                col_zscore[ind] = sc.extract_zscore()
   
 
         #plots = PRplots(cdf, pr, precision, plt_show=False, plt_save=False)
@@ -131,6 +94,9 @@ all_sets = gn_sets.get_sdbox_data()
 glyco_enzymes = gn_sets.get_all_glyco_enz() 
 r = run(all_sets, glyco_enzymes, extracted_dataset, tissue_filename)
 
+
+### run the below commented line, if the hardware is able to support it. It runs, just comment out above line (r =)
+## below commented runs the tissue experiment as single glyco enzyme based 
 """
 gn_lis = []
 gn_not_indata = []
