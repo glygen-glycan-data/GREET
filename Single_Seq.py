@@ -133,7 +133,7 @@ for gn_set in all_sets:
 
 
 
-def find_ct_less_100(m_df, unique_ind, ctc=cell_threshold_count):
+def find_ct_less_100(m_df, unique_ind, ctc=threshold_count):
     ct_less_100 = []
     updated_cell_types = []
     ct_types_counts = {}
@@ -256,7 +256,7 @@ def single_enz_experiment(gene_set, all_enzymes, non_glyco_genes, single_cts_tra
     cr = create_random_sets(gene_set, non_glyco_genes, all_enzymes, random_size=20)
     precision = 0.9
     col_zscore = {}
-    for ct in reduced_cell_types:
+    for ct in reduced_cell_types[0:2]:
         ml_score = RecallScore()
         for rand_num, ext_enz_set in cr.items():
             gnt = make_df(ext_enz_set)
@@ -298,11 +298,11 @@ def single_enz_experiment(gene_set, all_enzymes, non_glyco_genes, single_cts_tra
 def experiment(gene_set, all_enzymes, dataset, index_set, experiment_type = exp_type,  rts = random_test_size, rpa=recall_precision_threshold):     
     over_all_start = time.time()
     cr = create_random_sets(gene_set, dataset, all_enzymes, random_size=rts) #rts, check cofiguration file
-    precision = rpa #rta, check cofiguration file
+    precision = rpa #rpa, check cofiguration file
     col_zscore = {}
 
     # i.e index are tissue_names in tissue experiment, and cell_types in cell experiemnt
-    for ind in index_set: 
+    for ind in index_set[0:1]: 
         ml_score = RecallScore()
     
         for rand_num, ext_enz_set in cr.items():

@@ -37,22 +37,16 @@ datafile = args.datafile
 config = configparser.ConfigParser()
 config.read(config_file)
 
-#needed to avoid bug in single seq experiment
-tis_threshold = float(config["Preprocessing"]["threshold_count"])
 
+threshold_count = float(config["Preprocessing"]["threshold_count"])
+ngg_temp_file = int(config["Preprocessing"]["random_gene_set_size"])
 
-cell_threshold_count = float(config["Preprocessing"]["threshold_count"])
-
-if "Sets_of_Enzymes_exp" in config_file:
-  ngg_temp_file = int(config["Preprocessing"]["random_gene_set_size"])
-else:
-  ngg_temp_file = ""
   
 
 random_test_size = int(config["Parameters"]["random_test_sample_size"])
+exp_type = config["Parameters"]["experiment_type"]
 
-
-recall_precision_at = float(config["ML Parameters"]["recall_precision_at"])
+recall_precision_threshold = float(config["ML Parameters"]["recall_precision_at"])
 train_under_sample = float(config["ML Parameters"]["train_under_sample"])
 test_under_sample = float(config["ML Parameters"]["test_under_sample"])
 

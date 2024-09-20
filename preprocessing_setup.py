@@ -78,7 +78,7 @@ class FileStatus:
     
     return sorted(self.tis_names)
 
-  def extract_file_data(self, hpa_tissue=None, hpa_annotations=False, tissue_threshold = tis_threshold):
+  def extract_file_data(self, hpa_tissue=None, hpa_annotations=False, tissue_threshold = threshold_count):
     data = {}
     for gn, tis_val in self.temp_data.items():
       tissue_collection = defaultdict(list)

@@ -173,7 +173,7 @@ Glycosylation-Related Enzyme Expression Toolkit
         b. Dataset Creaton: A Pandas dataset is created from the provided data file.
         
         c. Experiment Function: The experiment pipeline runs, extracting Z-scores with a precision threshold of 0.9.
-
+        
         d. Mutliprocessesing: Multiprocessing is introduced to speed up the experiment process. The script expects additional arguments to control the workers and processors: 
             1. -w, --worker: Number of workers responsible for splitting the glyco_enzymes set.
 
