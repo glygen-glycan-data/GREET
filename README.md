@@ -160,3 +160,46 @@ Glycosylation-Related Enzyme Expression Toolkit
     *   Purpose: This snippet defines a list of machine learning model names and corresponding classifier objects. It then maps each model name to its classifier using a dictionary ml_names_classi.
     *   Usage: This is useful for initializing and organizing multiple models that will be used in the analysis pipeline.
 
+# tissue_exp.py
+1. Steps:
+    a. Command-Line Arguments:
+        1. -f: Output file name (to save experiment results).
+        2. -d: Datafile name to be saved/read in as temp_data.
+        3. -c: Configuration file for the tissue experiment.
+    
+    b. Process:
+        a. FileC Check: The script checks if the temp_data file exists in the data directory, using the FileStatus class and check_for_file function.
+        
+        b. Dataset Creaton: A Pandas dataset is created from the provided data file.
+        
+        c. Experiment Function: The experiment pipeline runs, extracting Z-scores with a precision threshold of 0.9.
+
+        d. Mutliprocessesing: Multiprocessing is introduced to speed up the experiment process. The script expects additional arguments to control the workers and processors: 
+            1. -w, --worker: Number of workers responsible for splitting the glyco_enzymes set.
+
+            2. -n, --nworker: Job number that assigns the subset of glyco_enzymes to the worker. If -w is 2, then -n can be 1 or 2 to split the task.
+            
+            3. -p, --processors: uses the number of cpu's of computer to run the experiment. Default is set to use maximum.  
+
+2. Usage:
+    a. Tissue experiment depends on GTEx dataset 
+    b. Produces Z-scores, Standard Deviation, mean for various glyco enzymes and n random size. 
+
+# single_seq.py
+1. Step:
+    a.  Expects 3 args:
+        1. -f: output_file name
+        2. -d: name of datafile that would be used, i.e GTEx single_Seq
+        3. -c: config file for tisssu experiment 
+    
+    b. Parses datafile as it is in Sparse_matrix and creates and pandas dataframe (merged_data)
+    c. There are helper functions that help guide process along
+    d. Mutliprocesses is introduced to help speed the experiment process (similar to Tissue_exp). 
+        1. expects 3 args:
+            a. -w, --worker: number of worker responsible for creating and splitting glyco_enzymes set
+            b. -n, --nworker: (job number) when -w splits the glyco_enzymes, this assigns the small glycoenzyme to this. i.e. if -w is 2, then -n can be 1 or 2. it has split the glyco enzyme in half.
+            c. -p, --processors: uses the number of cpu's of computer to run the experiment. Default is set to use maximum.  
+2. Usage:
+    a. Single Cell dataset from GTEx stored in h5ad, which has sparsed matrix. 
+    b. The sparse matrix is read and preparse pandas matrix from it to be used for downstream process.
+    c. experiment (function) pipeline is deployed to utlize and produce the output file similar to as described in tissue experiment.  

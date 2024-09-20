@@ -14,7 +14,6 @@ def x_y_split(data, tr_un_sam=train_under_sample, test_un_sam= test_under_sample
     X = data.drop(['Class'], axis = 1)
     y = np.array(data["Class"])
     class_counts = np.bincount(y)
-
     count_class_0 = class_counts[0]
     count_class_1 = class_counts[1]
     strat_split = StratifiedShuffleSplit(n_splits=1, test_size=0.2)
@@ -99,7 +98,7 @@ class ML_Parameters_Model:
   
 
 #def gen_ml_report(df, ml_names, tissue_name, x_y_split, rm_enz_exp=False):
-def gen_ml_report(df, ml_names, tissue_name, re_pr_at= recall_precision_at, rm_enz_exp=False):
+def gen_ml_report(df, ml_names, tissue_name, cpr_at=recall_precision_threshold, rm_enz_exp=False):
   
   X_train, X_test, y_train, y_test = x_y_split(df)
   #X_train, X_test, y_train, y_test = cv_split(df)
@@ -119,10 +118,11 @@ def gen_ml_report(df, ml_names, tissue_name, re_pr_at= recall_precision_at, rm_e
     clasi_m_data = m.classi_map_data()
 
     t = Pre_Recall(recall, interp_precision)
-    re_at_90 = t.precision_at(re_pr_at) #check configuration file
+    #print("Precision", type((cpr_at)), cpr_at)
+    re_at_90 = t.precision_at(0.9) #check configuration file
     collect_cdf_score[model_name] = {tissue_name: re_at_90}
 
-    ml_pred_lis.append(pr)
+    ml_pred_lis.append(predict_values)
     classification_data[model_name] = clasi_m_data
     collect_auc_score[model_name] = {tissue_name: auc_val}
     pr_re_dic[model_name] = {tissue_name: [recall, interp_precision]}

@@ -170,6 +170,7 @@ def samples(url):
 
     return samples_names
 
+
 def extracting_data(extract_enzymes_tup, samples_names, random_non_glyco_genes= ngg_temp_file):
   dataset = ["prostate", "whole_blood", "vagina", "uterus", "thyroid", "testis", "stomach", "spleen", "small_intestine_terminal_ileum", "skin_sun_exposed_lower_leg", "skin_not_sun_exposed_suprapubic", "pancreas", "pituitary", "ovary", "nerve_tibial", "muscle_skeletal", "minor_salivary_gland",
            "lung", "kidney_cortex", "kidney_medulla", "heart_left_ventricle", "heart_atrial_appendage", "fallopian_tube", "esophagus_gastroesophageal_junction", "esophagus_mucosa", "esophagus_muscularis", "colon_sigmoid", "colon_transverse",
@@ -277,8 +278,8 @@ def assign_class(tissue_headers, tissue_name):
 
 
 
-def check_for_file(hpa_tissue=None, return_hpa=False):
-  file_path = "data/temp_data.csv"
+def check_for_file(hpa_tissue=None, return_hpa=False, datafilename=datafile):
+  file_path = datafilename
   sam_url = "https://storage.googleapis.com/adult-gtex/annotations/v8/metadata-files/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt"
   fs = FileStatus(file_path)
 

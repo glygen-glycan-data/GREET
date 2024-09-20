@@ -1,35 +1,33 @@
-import scanpy as sc 
-from app import GeneSet
-import pandas as pd  
-import numpy as np
-from scipy.sparse import issparse, csr_matrix
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from app import Report, RecallScore, Scores, PRplots, create_random_sets
+from app import *
 from ml_parameters import *
 from plots import *
 from sklearn.preprocessing import MaxAbsScaler
-import time, multiprocessing
+from collections import defaultdict
 from queue import Empty
-import os, argparse
+from scipy.sparse import issparse, csr_matrix
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+import os
+import time, multiprocessing
+import scanpy as sc 
+import pandas as pd  
+import numpy as np
 
 
 
 #url = "https://storage.googleapis.com/adult-gtex/single-cell/v9/snrna-seq-data/GTEx_8_tissues_snRNAseq_atlas_071421.public_obs.h5ad"
 #file = "data/GTEx_8_tissues_snRNAseq_atlas_071421.public_obs.h5ad"
 
+
 adata = sc.read_h5ad(datafile)
 
 gn_sets = GeneSet()
 all_sets = gn_sets.get_sdbox_data()
 glyco_enzymes = gn_sets.get_all_glyco_enz()
-
+    
 non_glyco_set = adata.var.loc[~adata.var_names.isin(glyco_enzymes)]
 non_glyco_genes = non_glyco_set.index
 non_glyco_genes = non_glyco_genes.tolist()
-
-
-
 
 
 
@@ -121,7 +119,6 @@ for ct in Tissue_cells_types:
     combined_tis_ct.add(ct)
     combined_tis_ct.add(tis)
     combined_tis_ct.add(cell_type)
-
 
 
 gn_lis = []
@@ -252,7 +249,7 @@ with open(full_path, 'w', newline='') as csvfile:
 """
 
 #print(gn_not_indata)
-
+#old Experiment run
 
 def single_enz_experiment(gene_set, all_enzymes, non_glyco_genes, single_cts_track):     
     over_all_start = time.time()
@@ -298,6 +295,62 @@ def single_enz_experiment(gene_set, all_enzymes, non_glyco_genes, single_cts_tra
 
 
 
+def experiment(gene_set, all_enzymes, dataset, index_set, experiment_type = exp_type,  rts = random_test_size, rpa=recall_precision_threshold):     
+    over_all_start = time.time()
+    cr = create_random_sets(gene_set, dataset, all_enzymes, random_size=rts) #rts, check cofiguration file
+    precision = rpa #rta, check cofiguration file
+    col_zscore = {}
+
+    # i.e index are tissue_names in tissue experiment, and cell_types in cell experiemnt
+    for ind in index_set: 
+        ml_score = RecallScore()
+    
+        for rand_num, ext_enz_set in cr.items():
+            if experiment_type == "Tissue":
+                glyco_enz_set_data = EnzymeData(dataset, ext_enz_set)        
+                glyco_enz_set_data.add_parameters(ind)
+                gnt = glyco_enz_set_data.get_gen_dataset() 
+                glyco_enz_set_data.reset() 
+
+            elif experiment_type == "Cell":
+                print("This is cell experiment")
+                gnt = make_df(ext_enz_set)
+                
+                if type(ind) == tuple:
+                    gnt["Class"] = (gnt.index == ind).astype(int)
+            
+                else:
+                    index_flat = gnt.index.map(lambda x: " ".join(map(str,x)))
+                    gnt["Class"] = index_flat.str.contains(ind, regex=False)
+                    
+                ind = ct_name(ind) #renaming indices 
+                
+
+            re = Report(gnt)
+            pr_dic_scores, cdf_scores = re.execute_report(rand_num, ml_names_classi)
+            cdf = ml_score.extract_cdf_scores(cdf_scores)
+            pr = ml_score.extract_pr_scores(pr_dic_scores)
+
+        if cdf:
+            sc = Scores(cdf)
+            col_zscore[ind] = sc.extract_zscore()
+  
+
+        #plots = PRplots(cdf, pr, precision, plt_show=False, plt_save=False)
+        #plots.normalized_plt()
+        #plots.box_plt()
+        #plots.cdf_plt()
+        #plots.histo_plt()
+        
+    
+    #z_plot(col_zscore, plt_show=False, plt_save=False, title=gene_set)
+
+    print_process("Whole Set", over_all_start)
+
+    return col_zscore
+
+
+
 def make_job_indices(total_workers,job_number, glyco_en):
     n_job_ind = []
     glyco_en = sorted(glyco_en)
@@ -313,11 +366,12 @@ def make_job_indices(total_workers,job_number, glyco_en):
 
 
 class Workers:
-    def __init__(self, glyco_enz, non_genes, data, genes_nt_data):
+    def __init__(self, glyco_enz, non_genes, data, genes_nt_data, ct_indices):
         self.glyco_enz = sorted(glyco_enz)
         self.non_gly_gn = non_genes
         self.data = data
         self.gn_nt_data = genes_nt_data
+        self.ct_names = ct_indices
 
     def worker(self, queue, worker_id):
         total_gr_zscore = defaultdict(list)
@@ -331,11 +385,12 @@ class Workers:
                 print(f"Worker {worker_id}", gn)
                 test_gn = [gn]
                 total_gr_zscore[(f"Worker {worker_id}", gn)] = single_enz_experiment(test_gn, self.glyco_enz, self.non_gly_gn, self.data)
+                #total_gr_zscore[(f"Worker {worker_id}", gn)] = experiment(test_gn, self.glyco_enz, self.non_gly_gn, index_set = self.ct_names)
 
         return total_gr_zscore
     
-def worker_function(worker_id, glyco_enzymes, non_glyco_genes, merged_data, gns_nt_data, queue, result_dict):
-    w = Workers(glyco_enzymes, non_glyco_genes, merged_data, gns_nt_data)
+def worker_function(worker_id, glyco_enzymes, non_glyco_genes, merged_data, gns_nt_data, ct_ind, queue, result_dict):
+    w = Workers(glyco_enzymes, non_glyco_genes, merged_data, gns_nt_data, ct_ind)
     result_dict[worker_id] = w.worker(queue, worker_id)
 
 
@@ -349,14 +404,17 @@ if __name__ == "__main__":
     glyco_enzymes = sorted(glyco_enzymes)
 
     if not (args.workers and args.nworker):
-        parser.print_help()  # Print help message
-        raise AssertionError(f"{args.workers} Workers and {args.nworker} nworkers argument is required")
+        # parser.print_help()  # Print help message
+        args.workers = 1
+        args.nworker = 1
 
     if args.processors:
         p = args.processors
     else:
         p = cpuCount
         
+    w = args.workers 
+    j = args.nworker
 
     print(f"Number of Workers: {args.workers}")
     print(f"Job Number: {args.nworker}")
@@ -376,7 +434,7 @@ if __name__ == "__main__":
 
     jobs = []
     for i in range(1, p + 1):
-        p = multiprocessing.Process(target=worker_function, args=(i, glyco_enzymes, non_glyco_genes, merged_data, gn_not_indata, queue, result_dict))
+        p = multiprocessing.Process(target=worker_function, args=(i, glyco_enzymes, non_glyco_genes, merged_data, gn_not_indata, reduced_cell_types, queue, result_dict))
         jobs.append(p)
         p.start()
 
