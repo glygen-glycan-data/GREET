@@ -191,9 +191,9 @@ class DistributedProcessing(object):
                 start = time.time()
                 result = self.do_task(task,hostname=self.hostname,worker_index=worker_index,task_index=task_index,shared_data=self.shared_data)
             except Exception:
-                self.put_error(worker_index,task,task_index,time.time()-start,sys.exc_info())
+                self.put_error(worker_index,task,task_index,int(round(time.time()-start,0)),sys.exc_info())
             else:
-                self.put_result(worker_index,task,task_index,time.time()-start,result)
+                self.put_result(worker_index,task,task_index,int(round(time.time()-start,0)),result)
         return
 
     def wait_workers(self):
@@ -263,7 +263,7 @@ class DistributedProcessing(object):
         else:
             njobs = spec[0]
             ncpus = 1
-        sbatch = 'sbatch -n %s --output=/dev/null --array=1-%d'%(ncpus,njobs)
+        sbatch = 'sbatch --cpus-per-task %s --output=/dev/null --array=1-%d'%(ncpus,njobs)
         cmd = '%s %s'%(sys.executable,os.path.abspath(sys.argv[0]))
         for arg in worker_args:
             cmd += " "+arg%dict(server=self.hostname,ncpus=ncpus)
@@ -393,7 +393,7 @@ class DistributedProcessing(object):
         for i,task in enumerate(self.alltasks):
             start = time.time()
             result = self.do_task(task,hostname=self.hostname,task_index=(i+1),worker_index=workerid,shared_data=self.shared_data)
-            result = dict(status='RESULT',hostname=self.hostname,worker_index=workerid,task=task,task_index=(i+1),runtime=int(float(time.time()-start)),result=result)
+            result = dict(status='RESULT',hostname=self.hostname,worker_index=workerid,task=task,task_index=(i+1),runtime=int(round(time.time()-start,0)),result=result)
             self.donetasks.add(i+1)
             self.update_progress(result)
             yield result           
