@@ -45,8 +45,9 @@ class GeneSet():
     def extract_glyco_set_at(self, group_name):   
       group_df = self.enzymes_dict_set.get(group_name)
       return group_df
-    
 
+    def names(self):
+      return list(self.enzymes_dict_set.keys())
 
 class FileStatus:
   def __init__(self,filename):

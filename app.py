@@ -42,18 +42,20 @@ for i in range(len(names)):
   
 
 
-def create_random_sets(gene_set, dataset, glyco_set, random_size=int):
+def create_random_sets(gene_set, dataset, glyco_set, random_size):
   r_gen = defaultdict(set)
   non_glyco_set = []
   for gn in dataset:
     if gn not in glyco_set:
       non_glyco_set.append(gn)
+
+  # print(random_size+1,gene_set)
   
   for r_i in range(random_size):
     get_random_enz = random.sample(non_glyco_set, len(gene_set))
-    r_gen[r_i + 1] = get_random_enz     
+    r_gen[r_i+1] = set(get_random_enz)
   
-  r_gen[21] = gene_set
+  r_gen[random_size+1] = set([ x for x in gene_set ])
 
   return r_gen
 

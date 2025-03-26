@@ -20,10 +20,13 @@ import numpy as np
 
 
 adata = sc.read_h5ad(datafile)
+# print(adata)
 
 gn_sets = GeneSet()
 all_sets = gn_sets.get_sdbox_data()
 glyco_enzymes = gn_sets.get_all_glyco_enz()
+# print(glyco_enzymes)
+# print(all_sets)
     
 non_glyco_set = adata.var.loc[~adata.var_names.isin(glyco_enzymes)]
 non_glyco_genes = non_glyco_set.index
@@ -74,9 +77,11 @@ def reduce_df(data, enz_set):
 
 
 def make_df(enz_set, reduce_func=reduce_df, modify_df=False,  raw_adata=adata):
+    # print(enz_set)
     cm_gn = {}
     gn_exp_data = {}
     for gene in enz_set:
+        # print(gene,raw_adata.var_names)
         if gene in raw_adata.var_names:
            gn_in = np.where(raw_adata.var_names == gene)[0]
            gn_expression = raw_adata.X[:, gn_in]
@@ -102,17 +107,18 @@ def make_df(enz_set, reduce_func=reduce_df, modify_df=False,  raw_adata=adata):
 
 
 merged_data = make_df(glyco_enzymes)
+# print(merged_data.info())
+# print(merged_data)
 
 
 Tissue_cells_types = merged_data.index.unique()
 combined_tis_ct = set()
 for ct in Tissue_cells_types:
-    tis = ct[1]
-    cell_type = ct[0]
+    tis = ("",ct[1])
+    cell_type = (ct[0],"")
     combined_tis_ct.add(ct)
     combined_tis_ct.add(tis)
     combined_tis_ct.add(cell_type)
-
 
 gn_lis = []
 gn_not_indata = []
@@ -131,53 +137,58 @@ def find_ct_less_100(m_df, unique_ind, ctc=threshold_count):
     updated_cell_types = []
     ct_types_counts = {}
     single_ct_track = []
-    for ct in unique_ind:
-        if type(ct) == tuple:
-            m_df["Class"] = (m_df.index == ct).astype(int)
-            
-        else:
-            index_flat = m_df.index.map(lambda x: " ".join(map(str,x)))
-            m_df["Class"] = index_flat.str.contains(ct, regex=False)
+    for ct in sorted(unique_ind):
+        cts = ":" + ((":".join(map(str,ct))).strip(":")) + ":"
+        index_flat = m_df.index.map(lambda x: ":"+(":".join(map(str,x)))+":")
+        m_df["Class"] = index_flat.str.contains(cts, regex=False)
 
         count_class_1 = (m_df["Class"] == 1).sum()
         ct_types_counts[ct] = count_class_1
-        
-        track_id = 0
-        for check_type in unique_ind:
-            if type(ct) != tuple:
-                if ct == check_type or ct in check_type:
-                    track_id += 1
-    
-        if track_id == 2:
-            ct_less_100.append(ct)
-            single_ct_track.append(ct)
+        # print(ct,count_class_1)
 
-        elif count_class_1 < ctc: #check config file
+        if count_class_1 < ctc: #check config file
             ct_less_100.append(ct)
         elif ct == "Unknown":
             ct_less_100.append(ct)
-    
         else:
             updated_cell_types.append(ct)
-   
-    return ct_less_100, updated_cell_types, ct_types_counts, single_ct_track
+    separate_counts = defaultdict(int)
+    for ct in sorted(updated_cell_types):
+        if ct[0] and ct[1]:
+            separate_counts[ct[0]] += 1
+            separate_counts[ct[1]] += 1
+    for ct in sorted(list(updated_cell_types)):
+        if not ct[0]:
+            if separate_counts[ct[1]] <= 1:
+                updated_cell_types.remove(ct)
+                ct_less_100.append(ct)
+                single_ct_track.append(ct[1])
+        elif not ct[1]:
+            if separate_counts[ct[0]] <= 1:
+                updated_cell_types.remove(ct)
+                ct_less_100.append(ct)
+                single_ct_track.append(ct[0])
+
+    return ct_less_100, sorted(updated_cell_types), ct_types_counts, single_ct_track
 
 
+# print("combined_tis_ct",sorted(combined_tis_ct))
 drop_cts, reduced_cell_types, ind_counts, single_cts_track = find_ct_less_100(merged_data, combined_tis_ct)
-
-
-
+# print("drop_cts",sorted(drop_cts))
+# print("reduced_cell_types",sorted(reduced_cell_types))
+# print("single_cts_track",single_cts_track)
 
 def ct_name(cell_type_name, single_cts_track=single_cts_track):
-    if type(cell_type_name) == tuple:
-        if cell_type_name[0] in single_cts_track:
-            n_ct = f"{cell_type_name[0]} in [{cell_type_name[1]}]"
-        else:
-            n_ct = f"{cell_type_name[0]} in {cell_type_name[1]}"
-
+    if cell_type_name[0] in single_cts_track:
+        n_ct = f"{cell_type_name[0]} [{cell_type_name[1]}]"
+    elif cell_type_name[1] in single_cts_track:
+        n_ct = f"{cell_type_name[0]} [{cell_type_name[1]}]"
+    elif not cell_type_name[0]:
+        n_ct = "Tissue: "+cell_type_name[1]
+    elif not cell_type_name[1]:
+        n_ct = "Cell-type: "+cell_type_name[0]
     else:
-        n_ct = cell_type_name
-
+        n_ct = f"{cell_type_name[0]} in {cell_type_name[1]}"
     return n_ct
 
 
@@ -191,15 +202,11 @@ def percent_detected(df, unique_ind, gly_enz, gly_not_indata):
         if enz in gly_not_indata:
            continue
 
-        print(enz)
+        # print(enz)
         over_all_start = time.time()
         for ct in unique_ind:
-            if type(ct) == tuple:
-                df["Class"] = (df.index == ct).astype(int)
-            
-            else:
-                index_flat = df.index.map(lambda x: " ".join(map(str,x)))
-                df["Class"] = index_flat.str.contains(ct, regex=False)
+            index_flat = df.index.map(lambda x: " ".join(map(str,x)))
+            df["Class"] = index_flat.str.contains(ct, regex=False)
 
 
             name_ct = ct_name(ct)
@@ -218,6 +225,7 @@ def percent_detected(df, unique_ind, gly_enz, gly_not_indata):
 
 
 per_det = percent_detected(merged_data, combined_tis_ct, glyco_enzymes, gn_not_indata)
+# print(per_det)
 
 full_path = os.path.join("data/" + "percent_detected_count.tsv")
 with open(full_path, 'w', newline='') as csvfile:
@@ -245,12 +253,15 @@ with open(full_path, 'w', newline='') as csvfile:
 
 def experiment(gene_set, all_enzymes, dataset, index_set, experiment_type = exp_type,  rts = random_test_size, rpa=recall_precision_threshold):     
     over_all_start = time.time()
-    cr = create_random_sets(gene_set, dataset, all_enzymes, random_size=rts) #rts, check cofiguration file
+    cr = create_random_sets(gene_set[2], dataset, all_enzymes, random_size=rts) #rts, check cofiguration file
+    # print(cr)
     precision = rpa #rpa, check cofiguration file
     col_zscore = {}
 
+    # index_set = index_set[:20]
+
     # i.e index are tissue_names in tissue experiment, and cell_types in cell experiemnt
-    for ind in index_set[0:1]: 
+    for j,ind in enumerate(index_set): 
         ml_score = RecallScore()
     
         for rand_num, ext_enz_set in cr.items():
@@ -263,15 +274,11 @@ def experiment(gene_set, all_enzymes, dataset, index_set, experiment_type = exp_
             elif experiment_type == "Cell":
                 gnt = make_df(ext_enz_set)
                 
-                if type(ind) == tuple:
-                    gnt["Class"] = (gnt.index == ind).astype(int)
-            
-                else:
-                    index_flat = gnt.index.map(lambda x: " ".join(map(str,x)))
-                    gnt["Class"] = index_flat.str.contains(ind, regex=False)
+                inds = ":" + ((":".join(map(str,ind))).strip(":")) + ":"
+                index_flat = gnt.index.map(lambda x: ":"+(":".join(map(str,x)))+":")
+                gnt["Class"] = index_flat.str.contains(inds, regex=False)
                     
                 re_ind = ct_name(ind) #renaming indices 
-                
 
             re = Report(gnt)
             pr_dic_scores, cdf_scores = re.execute_report(rand_num, ml_names_classi)
@@ -290,6 +297,8 @@ def experiment(gene_set, all_enzymes, dataset, index_set, experiment_type = exp_
         #plots.box_plt()
         #plots.cdf_plt()
         #plots.histo_plt()
+        print("%d/%d"%(j+1,len(index_set)), "%d/%d"%(gene_set[0]+1,gene_set[1]), (" ".join(ind)).strip(), " ".join(sorted(gene_set[2])))
+        sys.stdout.flush()
         
     
     #z_plot(col_zscore, plt_show=False, plt_save=False, title=gene_set)
@@ -319,22 +328,22 @@ class Workers:
         self.glyco_enz = sorted(glyco_enz)
         self.non_gly_gn = non_genes
         self.data = data
-        self.gn_nt_data = genes_nt_data
+        self.gn_nt_data = set(genes_nt_data)
         self.ct_names = ct_indices
 
     def worker(self, queue, worker_id):
         total_gr_zscore = defaultdict(list)
         while True:
             try:
-                gn = queue.get(timeout=2) 
+                task = queue.get(timeout=2) 
             except Empty:
                 break  
 
-            if gn not in self.gn_nt_data:
-                print(f"Worker {worker_id}", gn)
-                test_gn = [gn]
+            if len(task[-1].intersection(self.gn_nt_data)) == 0:
+                # print(f"Worker {worker_id}", gn)
+                # test_gn = gn
                 #total_gr_zscore[(f"Worker {worker_id}", gn)] = single_enz_experiment(test_gn, self.glyco_enz, self.non_gly_gn, self.data)
-                total_gr_zscore[(f"Worker {worker_id}", gn)] = experiment(test_gn, self.glyco_enz, self.non_gly_gn, index_set = self.ct_names)
+                total_gr_zscore[(f"Worker {worker_id}", ", ".join(sorted(task[-1])))] = experiment(task, self.glyco_enz, self.non_gly_gn, index_set = self.ct_names)
 
         return total_gr_zscore
     
@@ -349,8 +358,6 @@ if __name__ == "__main__":
 
     cpuCount = os.cpu_count()
     print("Number of CPUs in the system:", cpuCount, "\n")
-
-    glyco_enzymes = sorted(glyco_enzymes)
 
     if not (args.workers and args.nworker):
         # parser.print_help()  # Print help message
@@ -369,16 +376,40 @@ if __name__ == "__main__":
     print(f"Job Number: {args.nworker}")
     print(f"Number of Processors: {p}")
 
-    job_indices = make_job_indices(w, j, glyco_enzymes)
-    print(job_indices)
+    # glyco_enzyme_sets = [ (e,) for e in sorted(glyco_enzymes) ]
+    # glyco_enzyme_sets = [ set((e1,e2)) for e1 in sorted(glyco_enzymes) for e2 in sorted(glyco_enzymes) if e1 < e2 ]
+
+    glyco_enzyme_sets = set()
+    allmonos = gn_sets.names()
+    for m in sorted(allmonos):
+        print(m)
+    # allmonos = ['NeupNAc-a6-GalpNAc','GalpNAc-b4-GlcpNAc']
+    allmonopairs = [('NeupNAc-a6-Galp','Galp-b4-GlcpNAc'),('NeupNAc-a6-GalpNAc','GalpNAc-b4-GlcpNAc'),
+                    ('sulfate-n4-GalpNAc','GalpNAc-b4-GlcpNAc')]
+    for pair in allmonopairs:
+        for n1 in pair:
+            for n2 in pair:
+                if n1 >= n2:
+                    continue
+                for e1 in gn_sets.extract_glyco_set_at(n1):
+                    for e2 in gn_sets.extract_glyco_set_at(n2):
+                        if e1 == e2:
+                            continue
+                        glyco_enzyme_sets.add(tuple(sorted([e1,e2])))
+    glyco_enzyme_sets = list(set(x) for x in glyco_enzyme_sets)
+    # glyco_enzyme_sets = glyco_enzyme_sets[:8]
+
+    print(f"Number of enzyme sets: {len(glyco_enzyme_sets)}")
+    print(f"Number of cell-types: {len(reduced_cell_types)}")
+    job_indices = make_job_indices(w, j, glyco_enzyme_sets)
+    print(f"Number of enzymes sets to analyze: {len(job_indices)}")
 
     queue = multiprocessing.Queue()
     manager = multiprocessing.Manager()
     result_dict = manager.dict()
 
-
     for indx in job_indices:
-        queue.put(glyco_enzymes[indx])
+        queue.put((indx,len(glyco_enzyme_sets),glyco_enzyme_sets[indx]))
 
 
     jobs = []

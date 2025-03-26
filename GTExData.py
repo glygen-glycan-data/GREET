@@ -14,16 +14,23 @@ def toc(msg="Elapsed"):
     starts.pop(-1)
     print(f"{msg}: {elapsed:.2f}",file=sys.stderr)
 
-class GTexData:
-    tpmdata='GTEx_gene_tpm.gct.gz'
-    sampledata='GTEx_SampleAttributesDS.txt'
-    bindata='GTEx.bin'
+class GTExData:
+    tpmdataext='_gene_tpm.gct.gz'
+    sampledataext='_SampleAttributesDS.txt'
+    bindataext='.bin'
 
-    def __init__(self,datadir='data',ensgid=False,force=False):
+    def __init__(self,filename=None,ensgid=False,force=False):
         self.ensgid = ensgid
-        if not force and os.path.exists(os.path.join(datadir,self.bindata)):
-            self.readbin(datadir)
+        if filename.endswith(self.bindataext) and os.path.exists(filename):
+            self.readbin(filename)
+        elif not force and filename.endswith(self.tpmdataext) and os.path.exists(filename.replace(self.tpmdataext,self.bindataext)):
+            self.readbin(filename.replace(self.tpmdataext,self.bindataext))
         else:
+            assert filename.endswith(self.tpmdataext)
+            self.tmpdata = filename
+            self.sampledata = filename.replace(self.tpmdataext,self.sampledataext)
+            self.bindata = filename.replace(self.tpmdataext,self.bindataext)
+            datadir = os.path.split(filename)[0]
             self.read(datadir)
             self.writebin(datadir)
 
@@ -87,8 +94,8 @@ class GTexData:
         self.df.to_feather(os.path.join(datadir,self.bindata))
         self.df.set_index('Sample',inplace=True)
 
-    def readbin(self,datadir='data'):
-        self.df = pd.read_feather(os.path.join(datadir,self.bindata))
+    def readbin(self,filename):
+        self.df = pd.read_feather(filename)
         self.df.set_index('Sample',inplace=True)
         self.tissues = set(self.df['Tissue'])
         self.samplemd = dict(map(lambda t: (t[0],dict(tisssue=t[1])),zip(self.df.index,self.df['Tissue'])))

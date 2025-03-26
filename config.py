@@ -1,53 +1,100 @@
 import configparser, argparse
 
+from glycoenzymes import GlycoEnzymes
+from dataio import *
+from experiment import *
 
+class GREETConfig(object):
+    GTEX_TISSUE_RNASEQ = 1
+    GTEX_CELLTYPE_SCRNASEQ = 2
 
-parser = argparse.ArgumentParser(description='Process output filename')
+    def __init__(self,config_file):
+        self.config = configparser.ConfigParser()
+        self.config.read(config_file)
 
-parser.add_argument('-f', "--filename", metavar='output filename', type=str, required=True,
-                    help='name of the output file')
+    @staticmethod
+    def convert_exp_type(s):
+        assert s in ("GTEX_TISSUE_RNASEQ","GTEX_CELLTYPE_SCRNASEQ"), "Experiment type %s not valid"%(s,)
+        return getattr(GREETConfig,s)
 
-parser.add_argument('-c', "--config", metavar='config_file', type=str, required=True,
-                    help='Path to the configuration file (.ini)')
+    def get_param(self,section,param,conversion=str):
+        return conversion(self.config[section][param])
+        
+    def sandbox_groupby(self):
+        return self.get_param("Enzymes","groupby")
 
-parser.add_argument('-d', "--datafile", metavar='data_file', type=str, required=True,
-                    help='Path to the data file')
+    def sandbox_datafile(self):
+        return self.get_param("Enzymes","datafile")
 
-parser.add_argument('-w', "--workers", metavar='Number of Splits among the Workers', type=int,
-                    help='an integer for the number of workers')
+    def experiment_type(self):
+        return self.get_param("Data","experiment_type",GREETConfig.convert_exp_type)
 
-parser.add_argument('-n', "--nworker", metavar='nworkers', type=int,
-                    help='an integer for the job number')
+    def min_samples_per_sampletype(self):
+        return self.get_param("Data","min_samples_per_sampletype",float)
 
-parser.add_argument('-p', "--processors", metavar='Number of processor', type=int,
-                    help='an integer for the number of processors')
+    def non_glycoenzyme_genesets(self):
+        return self.get_param("Parameters","non_glycoenzyme_genesets",int)
+    
+    def stdev_floor(self):
+        return self.get_param("Parameters","stdev_floor",float)
 
+    def replicates(self):
+        return self.get_param("Parameters","replicates",int)
 
-args = parser.parse_args()
+    def model_class(self):
+        return self.get_param("MachineLearning","model_class",str)
 
+    def kfoldcv_folds(self):
+        return self.get_param("MachineLearning","kfoldcv_folds",int)
 
-w = args.workers
-j = args.nworker
+    def ksplit_splits(self):
+        return self.get_param("MachineLearning","ksplit_splits",int)
 
+    def test_split(self):
+        return self.get_param("MachineLearning","test_split",float)
 
-tissue_filename = args.filename
-config_file = args.config
-datafile = args.datafile
+    def train_downsample(self):
+        return self.get_param("MachineLearning","train_downsample",float)
 
-config = configparser.ConfigParser()
-config.read(config_file)
+    def test_downsample(self):
+        return self.get_param("MachineLearning","test_downsample",float)
 
+    def score_class(self):
+        return self.get_param("MachineLearning","score_class",str)
 
-threshold_count = float(config["Preprocessing"]["threshold_count"])
-ngg_temp_file = int(config["Preprocessing"]["random_gene_set_size"])
+    def precision(self):
+        return self.get_param("MachineLearning","precision",float)
 
-  
+    def get_enzymes(self):
+        return GlycoEnzymes(datafile=self.sandbox_datafile(),
+                            groupby=self.sandbox_groupby())
 
-random_test_size = int(config["Parameters"]["random_test_sample_size"])
-exp_type = config["Parameters"]["experiment_type"]
+    def get_data(self,datafile):
+        if self.experiment_type() == self.GTEX_TISSUE_RNASEQ:
+            dataio = GTExTissueRNASeq(self)
+        elif self.experiment_type() == self.GTEX_CELLTYPE_SCRNASEQ:
+            dataio = GTExCelltypeSCRNASeq(self)
+        else:
+            raise LookupError("Bad experiment type")
+        dataio.read(datafile)
+        return dataio
 
-recall_precision_threshold = float(config["ML Parameters"]["recall_precision_at"])
-train_under_sample = float(config["ML Parameters"]["train_under_sample"])
-test_under_sample = float(config["ML Parameters"]["test_under_sample"])
+    def get_instance(self,clsname,*args,**kwargs):
+        cls = eval(clsname)
+        for p in cls.params:
+            kwargs[p] = getattr(self,p)()
+        return cls(*args,**kwargs)
 
-sd_threshold = float(config["Z Score"]["sd_less_than_threshold"])
+    def get_model_instance(self):
+        return self.get_instance(self.model_class())
+
+    def get_score_instance(self,model):
+        return self.get_instance(self.score_class(),model=model)
+
+    def get_experiment_instance(self,data,score):
+        return self.get_instance('Experiment',data,score=score)
+
+    def get_experiment(self,data):
+        model = self.get_model_instance()
+        score = self.get_score_instance(model)
+        return self.get_experiment_instance(data,score)
