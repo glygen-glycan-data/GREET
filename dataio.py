@@ -49,8 +49,8 @@ class GTExCelltypeSCRNASeq(DataIO):
     
     def read(self,filename):
         self.data = scanpy.read_h5ad(filename)
-        self.glyco_genes = set(self.data.var_names).intersection(set(self.glyco_enzymes()))
-        self.non_glyco_genes = set(self.data.var_names).difference(self.glyco_genes)
+        self.glyco_genes = sorted(set(self.data.var_names).intersection(set(self.glyco_enzymes())))
+        self.non_glyco_genes = sorted(set(self.data.var_names).difference(self.glyco_genes))
 
         self.sampledf = self.data.obs[['Broad cell type','Tissue']]
         celltypes = set(self.sampledf.itertuples(index=False, name=None))
