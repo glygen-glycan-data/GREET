@@ -14,9 +14,13 @@ class DataIO(object):
         return self.enzymes.all_enzymes()
 
     def glyco_enzyme_genesets(self):
+        seen = set()
         for name,geneset in self.enzymes.genesets():
             if len(set(geneset).intersection(self.glyco_genes)) == len(geneset):
-                yield name,geneset
+                key = ":".join([ name ] + sorted(geneset))
+                if key not in seen:
+                    yield name,geneset
+                    seen.add(key)
 
     def sample_non_glyco_genes(self,n):
         return random.sample(self.non_glyco_genes,n)
