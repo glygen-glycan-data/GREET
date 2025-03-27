@@ -23,7 +23,7 @@ class GlycoEnzymes():
     def group(self,enzyme):
         return self.groupby%enzyme
         
-    def __init__(self, datafile=None, groupby=None):
+    def __init__(self, datafile=None, groupby=None, genesets=None):
         if not datafile:
             self.datafile = self.sandbox_datafile
         self.datafile = datafile
@@ -32,6 +32,16 @@ class GlycoEnzymes():
         self.groupby = self.convert_group(groupby)
 
         self.build()
+        if genesets == 'SINGLETONS':
+            self.genesets = self.singletons
+        elif genesets == 'GROUPPAIRS':
+            self.genesets = self.grouppairs
+        elif genesets == 'PAIRS':
+            self.genesets = self.pairs
+        elif genesets == 'BYGROUP':
+            self.genesets = self.groupsets
+        else:
+            raise ValueError("Bad geneset value")
 
     def build(self):
 
@@ -69,3 +79,10 @@ class GlycoEnzymes():
         for grp in self.all_groups():
             yield grp,self.enzymes_bygroup(grp)
 
+    def grouppairs(self):
+        for grp in self.all_groups():
+            for gn1 in self.enzymes_bygroup(grp):
+                for gn2 in self.enzymes_bygroup(grp):
+                    if gn1 < gn2:
+                        yield "%s,%s"%(gn1,gn2),set([gn1,gn2])
+     

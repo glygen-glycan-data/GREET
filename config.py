@@ -26,6 +26,9 @@ class GREETConfig(object):
     def sandbox_datafile(self):
         return self.get_param("Enzymes","datafile")
 
+    def sandbox_genesets(self):
+        return self.get_param("Enzymes","genesets")
+
     def experiment_type(self):
         return self.get_param("Data","experiment_type",GREETConfig.convert_exp_type)
 
@@ -39,7 +42,9 @@ class GREETConfig(object):
         return self.get_param("Parameters","stdev_floor",float)
 
     def replicates(self):
-        return self.get_param("Parameters","replicates",int)
+        value = self.get_param("Parameters","replicates",int)
+        assert value%2 == 1
+        return value
 
     def model_class(self):
         return self.get_param("MachineLearning","model_class",str)
@@ -67,7 +72,8 @@ class GREETConfig(object):
 
     def get_enzymes(self):
         return GlycoEnzymes(datafile=self.sandbox_datafile(),
-                            groupby=self.sandbox_groupby())
+                            groupby=self.sandbox_groupby(),
+                            genesets=self.sandbox_genesets())
 
     def get_data(self,datafile):
         if self.experiment_type() == self.GTEX_TISSUE_RNASEQ:

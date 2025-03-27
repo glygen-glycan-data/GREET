@@ -36,8 +36,7 @@ tasks = []
 for gsname,geneset in data.glyco_enzyme_genesets():
     for name,samples in data.topredict():
         tasks.append(dict(geneset_name=gsname,geneset=geneset,
-                          topredict=name,samples=samples,
-                          replicates=config.replicates()))
+                          topredict=name,samples=samples))
         # print(tasks[-1])
 
 output = sys.stdout
@@ -45,12 +44,11 @@ if args.outfile is not None:
     output = open(args.outfile,'w')
 logtempl = "worker_id: %(hostname)s:%(worker_index)s task_id: %(task_index)s runtime: %(runtime)s progress: %(progress)s"
 headers = """
-  GeneSet SampleType Replicate Recall ZScore
+  GeneSet SampleType Recall ZScore
 """.split()
 print("\t".join(headers),file=output)
-for result in dp.process(workers,experiment.do_analysis,tasks,args.verbose,logtempl=logtempl):
-    for row in result:
-        print("\t".join([ str(row.get(h,"")) for h in "geneset_name topredict replicate score zscore".split()]),file=output)
-        output.flush()
+for row in dp.process(workers,experiment.do_analysis,tasks,args.verbose,logtempl=logtempl):
+    print("\t".join([ str(row.get(h,"")) for h in "geneset_name topredict score zscore".split()]),file=output)
+    output.flush()
 if args.outfile is not None:
     output.close()

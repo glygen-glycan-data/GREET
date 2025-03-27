@@ -175,9 +175,7 @@ class Experiment(object):
                              score=obs[0],zscore=zscore,randscores=obs[1:]))
         
         medianrow = dict(sorted(rows,key=lambda d: d['zscore'])[len(rows)//2].items())
-        medianrow['replicate'] = 'med.'
-        rows.append(medianrow)
-        for r in rows:
-            r['score'] = round(r['score'],3)
-            r['zscore'] = round(r['zscore'],3)
-        return rows
+        del medianrow['replicate']
+        medianrow['score'] = round(medianrow['score'],3)
+        medianrow['zscore'] = round(medianrow['zscore'],3)
+        return medianrow
