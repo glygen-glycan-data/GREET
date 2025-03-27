@@ -42,13 +42,13 @@ for gsname,geneset in data.glyco_enzyme_genesets():
 output = sys.stdout
 if args.outfile is not None:
     output = open(args.outfile,'w')
-logtempl = "worker_id: %(hostname)s:%(worker_index)s task_id: %(task_index)s runtime: %(runtime)s progress: %(progress)s"
+logtempl = "worker_id: %(hostname)s:%(worker_index)s task_id: %(task_index)s runtime: %(runtime)s progress: %(progress)s remaining: %(remaining)s hrs"
 headers = """
-  GeneSet SampleType Recall ZScore
+  GeneSet Genes SampleType Recall ZScore
 """.split()
 print("\t".join(headers),file=output)
 for row in dp.process(workers,experiment.do_analysis,tasks,args.verbose,logtempl=logtempl):
-    print("\t".join([ str(row.get(h,"")) for h in "geneset_name topredict score zscore".split()]),file=output)
+    print("\t".join([ str(row.get(h,"")) for h in "geneset_name genes topredict score zscore".split()]),file=output)
     output.flush()
 if args.outfile is not None:
     output.close()

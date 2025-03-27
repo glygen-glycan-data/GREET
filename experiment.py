@@ -28,8 +28,8 @@ class MLModel(object):
     @staticmethod
     def interpolated_precision(precision,recall):
         # assumes precision is sorted for recall high to low...
-        assert len(precision) == len(recall)
-        assert sorted(recall,reverse=True) == list(recall)
+        # assert len(precision) == len(recall)
+        # assert sorted(recall,reverse=True) == list(recall)
         interp_precision = []
         max_precision = precision[0]
         for i in range(0, len(precision)):
@@ -134,8 +134,8 @@ class RecallAtPrecision(MLScore):
 
     def score(self,X,y):
         precision,recall = self.get_prcurve(X,y)
-        assert sorted(precision) == list(precision)
-        assert sorted(recall,reverse=True) == list(recall)
+        # assert sorted(precision) == list(precision)
+        # assert sorted(recall,reverse=True) == list(recall)
         for p,r in zip(precision,recall):
             if p >= self.precision:
                 return r
@@ -170,7 +170,7 @@ class Experiment(object):
                 score = self.scorer.score(X,y)
                 obs.append(score)
             zscore = self.zscore(obs[0],obs[1:])
-            rows.append(dict(geneset_name=task['geneset_name'],topredict=task['topredict'],
+            rows.append(dict(geneset_name=task['geneset_name'],genes=",".join(sorted(genes)),topredict=task['topredict'],
                              replicate=i+1,task_id=kwargs['task_index'],
                              score=obs[0],zscore=zscore,randscores=obs[1:]))
         

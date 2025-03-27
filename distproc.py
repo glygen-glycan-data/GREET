@@ -32,27 +32,25 @@ class DistributedProcessing(object):
         else:
             self.host = self.hostname
         if port:
-            self.port = port
+            self.port = int(port)
         else:
-            self.port = self.random_port(open(sys.argv[0]).read())
+            self.port = self.random_port()
         if secret:
-            self.secret = secret
+            self.secret = secret.encode()
         else:
-            self.secret = self.random_secret(open(sys.argv[0]).read())
+            self.secret = self.random_secret()
 
     @staticmethod
     def random_port(seed_string=None):
         if seed_string:
-            seed = int(hashlib.sha256(seed_string.encode()).hexdigest(),16)
-            random.seed(seed)
+            return (60900 + int(hashlib.sha256(seed_string.encode()).hexdigest(),16)%100)
         return random.randint(60900,60999)
 
     @staticmethod
-    def random_secret(seed_string=None):
+    def random_secret(seed_string=None,length=16):
         if seed_string:
-            seed = int(hashlib.sha256(seed_string.encode()).hexdigest(),16)
-            random.seed(seed)
-        return ("".join([random.choice('0123456789abcdef') for _ in range(16)])).encode()
+            return hashlib.sha256(seed_string.encode()).hexdigest()[:length].encode()
+        return ("".join([random.choice('0123456789abcdef') for _ in range(length)])).encode()
 
     def make_server_manager(self):
 
@@ -75,7 +73,7 @@ class DistributedProcessing(object):
         self.manager = JobQueueManager(address=("", self.port), authkey=self.secret)
         self.manager.start()
         if self.verbose:
-            print('Server started at port %s' % self.port, file=sys.stderr)
+            print('Server started at port %s (secret: %s)' % (self.port, self.secret.decode()), file=sys.stderr)
         self.tasks = self.manager.get_task_queue()
         self.results = self.manager.get_result_queue()
         self.worker_messages = self.manager.get_worker_queue()
@@ -93,6 +91,8 @@ class DistributedProcessing(object):
         ServerQueueManager.register('get_manager_queue')
         ServerQueueManager.register('get_shared_data')
 
+        if self.verbose:
+            print('Client attempting connection to %s:%s (%s)' % (self.host, self.port, self.secret.decode()), file=sys.stderr)
         self.register_cleanup()
         self.manager = ServerQueueManager(address=(self.host, self.port), authkey=self.secret)
         ntries = 4
@@ -106,7 +106,7 @@ class DistributedProcessing(object):
                 print('Client failed to connect, attempt %d'%(i+1,),file=sys.stderr)
                 time.sleep(5)
         if self.verbose:
-            print('Client connected to %s:%s' % (self.host, self.port), file=sys.stderr)
+            print('Client connected to %s:%s (%s)' % (self.host, self.port, self.secret.decode()), file=sys.stderr)
         self.tasks = self.manager.get_task_queue()
         self.results = self.manager.get_result_queue()
         self.worker_messages = self.manager.get_worker_queue()
@@ -229,7 +229,7 @@ class DistributedProcessing(object):
         worker_args = []
         for argi in sys.argv[1:]:
             if argi == arg:
-                worker_args.append("__%(ncpus)s:%(server)s__")
+                worker_args.append("__%(ncpus)s:%(server)s:%(port)s:%(secret)s__")
             else:
                 worker_args.append(argi)
         procspec = {None: 0}
@@ -248,10 +248,10 @@ class DistributedProcessing(object):
                 self.start_remote_workers(k,v,worker_args)
         return procspec[None]
 
-    def start_remote_workers(self,worker,ncpus,worker_args):
+    def start_remote_workers(self,worker,spec,worker_args):
         cmd = 'ssh -n -f %s nohup sh -c \\\'"cd %s; %s %s'%(worker,os.getcwd(),sys.executable,sys.argv[0])
         for arg in worker_args:
-            cmd += " "+arg%dict(server=self.hostname,ncpus=ncpus)
+            cmd += " "+arg%dict(server=self.hostname,ncpus=spec[0],port=self.port,secret=self.secret.decode())
         cmd += " &\"\\\'"
         p = subprocess.run(cmd,shell=True,check=True,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
         self.procs.append(p)
@@ -266,7 +266,7 @@ class DistributedProcessing(object):
         sbatch = 'sbatch --cpus-per-task %s --output=/dev/null --array=1-%d'%(ncpus,njobs)
         cmd = '%s %s'%(sys.executable,os.path.abspath(sys.argv[0]))
         for arg in worker_args:
-            cmd += " "+arg%dict(server=self.hostname,ncpus=ncpus)
+            cmd += " "+arg%dict(server=self.hostname,ncpus=ncpus,port=self.port,secret=self.secret.decode())
         stdinstr = "\n".join(map(str.lstrip,filter(None,"""
         #!/bin/sh
         srun %s
@@ -299,7 +299,7 @@ class DistributedProcessing(object):
     def update_progress(self,result):
         result['progress'] = "%s/%s (%.2f%%)"%(len(self.donetasks),len(self.alltasks),100*len(self.donetasks)/len(self.alltasks))
         result['elapsed'] = int(round(time.time()-self.starttime,0))
-        result['remaining'] = int(round((len(self.alltasks)-len(self.donetasks))*result['elapsed']/len(self.donetasks),0))
+        result['remaining'] = "%.2f"%(((len(self.alltasks)-len(self.donetasks))*result['elapsed']/len(self.donetasks)/3600),)
 
     def __iter__(self):
         return self.iterresults()
@@ -442,16 +442,16 @@ class DistributedProcessing(object):
 
         elif workers[0] == "worker":
             # worker
-            ncpus,server = workers[1].split(':')
-            DistributedProcessing(target=target,host=server).client(int(ncpus))
+            ncpus,server,port,secret = workers[1].split(':')
+            DistributedProcessing(target=target,host=server,port=port,secret=secret).client(int(ncpus))
             sys.exit(0)
 
     @staticmethod
     def start_if_worker(workers,target):
         if workers is not None and workers[0] == "worker":
             # worker
-            ncpus,server = workers[1].split(':')
-            DistributedProcessing(target=target,host=server).client(int(ncpus))
+            ncpus,server,port,secret = workers[1].split(':')
+            DistributedProcessing(target=target,host=server,port=port,secret=secret).client(int(ncpus))
             sys.exit(0)
                                                                                                          
 def do_task(task,**kwargs):

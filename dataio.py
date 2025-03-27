@@ -17,7 +17,7 @@ class DataIO(object):
         seen = set()
         for name,geneset in self.enzymes.genesets():
             if len(set(geneset).intersection(self.glyco_genes)) == len(geneset):
-                key = ":".join([ name ] + sorted(geneset))
+                key = ":".join(sorted(geneset))
                 if key not in seen:
                     yield name,geneset
                     seen.add(key)
