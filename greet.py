@@ -42,7 +42,7 @@ for gsname,geneset in data.glyco_enzyme_genesets():
 output = sys.stdout
 if args.outfile is not None:
     output = open(args.outfile,'w')
-logtempl = "worker_id: %(hostname)s:%(worker_index)s task_id: %(task_index)s runtime: %(runtime)s progress: %(progress)s remaining: %(remaining)s hrs"
+logtempl = "worker_id: %(hostname)s:%(worker_index)s task_id: %(task_index)s runtime: %(runtime)s progress: %(progress)s remaining: %(remaining)s"
 headers = """
   GeneSet Genes SampleType Recall ZScore
 """.split()

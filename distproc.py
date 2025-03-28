@@ -9,12 +9,13 @@ import secrets
 import os
 import os.path
 import hashlib
+import math
 import multiprocessing
 import traceback
 import threading
 import subprocess
 import signal
-from collections import defaultdict
+from collections import defaultdict, deque
 
 from multiprocessing.managers import SyncManager
 
@@ -295,11 +296,45 @@ class DistributedProcessing(object):
             pass
         return True
 
+    def hms(self,seconds,lb=True):
+        s = seconds
+        h = int(math.floor(s/3600))
+        s -= h*3600
+        m = int(math.floor(s/60))
+        s -= m*60
+        if lb:
+            s = int(math.floor(s))
+        else:
+            s = int(math.ceil(s))
+        return "%d:%02d:%02d"%(h,m,s)
+
+    def hm(self,seconds,lb=True):
+        s = seconds
+        h = int(math.floor(s/3600))
+        s -= h*3600
+        if lb:
+            m = int(math.floor(s/60))
+        else:
+            m = int(math.ceil(s/60))
+        return "%d:%02d"%(h,m)
 
     def update_progress(self,result):
-        result['progress'] = "%s/%s (%.2f%%)"%(len(self.donetasks),len(self.alltasks),100*len(self.donetasks)/len(self.alltasks))
-        result['elapsed'] = int(round(time.time()-self.starttime,0))
-        result['remaining'] = "%.2f"%(((len(self.alltasks)-len(self.donetasks))*result['elapsed']/len(self.donetasks)/3600),)
+        start = self.starttime
+        now = time.time()
+        done = len(self.donetasks)
+        alltasks = len(self.alltasks)
+        remain = alltasks-done
+ 
+        result['progress'] = "%s/%s (%.2f%%)"%(done, alltasks, 100*done/alltasks)
+        if start is not None:
+            elapsed = now-start
+            result['elapsed'] = self.hms(elapsed,lb=True)
+            result['remaining'] = self.hm(remain*elapsed/done,lb=False)
+            result['taskspermin'] = "%.2f"%(60*done/elapsed,)
+        else:
+            result['elapsed'] = ""
+            result['remaining'] = ""
+            result['taskspermin'] = ""
 
     def __iter__(self):
         return self.iterresults()
@@ -309,7 +344,7 @@ class DistributedProcessing(object):
         for i,task in enumerate(self.alltasks):
             self.put_task(i+1,task)
 
-        self.starttime = time.time()
+        self.starttime = None
         self.workerids = set()
         self.donetasks = set()
         self.taskattempts = defaultdict(int)
@@ -325,6 +360,8 @@ class DistributedProcessing(object):
                     self.workerids.add(msg[1])
                 elif msg[0] == "TASKID":
                     self.task2worker[msg[1]] = msg[2]
+                    if self.starttime is None:
+                        self.starttime = time.time()
                 elif msg[0] == "HEARTBEAT":
                     self.heartbeat[msg[1]] = time.time()
 

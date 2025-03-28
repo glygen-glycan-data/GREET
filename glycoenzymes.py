@@ -57,22 +57,8 @@ class GlycoEnzymes():
         self.enzyme2group = dict()
         self.group2enzymes = defaultdict(set)
         self.groupby = self.convert_group(groupby)
-
+        self.genesets_generators = [ self.genesets_generator_map[gs.strip()] for gs in genesets.split(',') ]
         self.build()
-        if genesets == 'SINGLETONS':
-            self.genesets = self.singletons
-        elif genesets == 'NONGROUPPAIRS':
-            self.genesets = self.nongrouppairs
-        elif genesets == 'ADJGROUPPAIRS':
-            self.genesets = self.adjgrouppairs
-        elif genesets == 'GROUPPAIRS':
-            self.genesets = self.grouppairs
-        elif genesets == 'PAIRS':
-            self.genesets = self.pairs
-        elif genesets == 'BYGROUP':
-            self.genesets = self.groupsets
-        else:
-            raise ValueError("Bad geneset value")
 
     def build(self):
 
@@ -156,9 +142,15 @@ class GlycoEnzymes():
         genesetname = genelist[0][:l] + "{" + remstr + "}"
         return genesetname
 
+    def genesets(self):
+        for gsgen in self.genesets_generators:
+            for gsname,gs in gsgen(self):
+                yield gsname,gs
+
     def singletons(self):
-        for gn in self.all_enzymes():
-            yield gn,set([gn])
+        for grp in self.all_groups():
+            for gn in self.enzymes_bygroup(grp)
+                yield grp,set([gn])
 
     def pairs(self):
         for gn1 in self.all_enzymes():
@@ -196,6 +188,16 @@ class GlycoEnzymes():
                 for gn2 in self.enzymes_bygroup(grp2):
                     enzs = set([gn1,gn2])
                     yield "<-".join([grp1,grp2]),enzs
+
+    genesets_generator_map = dict(
+        SINGLETONS = singletons,
+        NONGROUPPAIRS = nongrouppairs,
+        ADJGROUPPAIRS = adjgrouppairs,
+        GROUPPAIRS = grouppairs,
+        PAIRS = pairs,
+        BYGROUP = groupsets,
+    )
+
 
 if __name__ == "__main__":
     ge = GlycoEnzymes("data/sandbox.json","GROUP_MONO_ANOMER_SITE_PARENT","BYGROUP")
