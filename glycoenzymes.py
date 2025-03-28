@@ -149,7 +149,7 @@ class GlycoEnzymes():
 
     def singletons(self):
         for grp in self.all_groups():
-            for gn in self.enzymes_bygroup(grp)
+            for gn in self.enzymes_bygroup(grp):
                 yield grp,set([gn])
 
     def pairs(self):
