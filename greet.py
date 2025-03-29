@@ -2,6 +2,8 @@
 
 import sys, os
 
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+
 import argparse
 from distproc import DistributedProcessing as dp
 
