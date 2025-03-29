@@ -46,6 +46,28 @@ class GTExTissueRNASeq(DataIO):
 
     def read(self,filename):
         self.data = GTExData.GTExData(filename)
+        self.glyco_genes = sorted(set(self.data.genes()).intersection(set(self.glyco_enzymes())))
+        self.non_glyco_genes = sorted(set(self.data.genes()).difference(self.glyco_genes))
+
+        self.sampledf = self.data.df[['Tissue']]
+        self.tissues = set()
+        for t in self.data.tissues:
+            ind = self.tissue_toindex(t)
+            if sum(ind) >= self.config.min_samples_per_sampletype():
+                self.tissues.add(t)
+
+    def tissue_toindex(self,t):
+        return (self.sampledf['Tissue']==t)
+            
+    def samples_to_index(self,samples):
+        return self.tissue_toindex(samples)
+
+    def topredict(self):
+        for t in sorted(self.tissues):
+            yield t,t
+
+    def gene_restricted_df(self,genes):
+        return self.data.df.loc[:,list(genes)]
 
 import scanpy
 

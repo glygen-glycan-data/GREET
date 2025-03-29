@@ -101,7 +101,10 @@ class GTExData:
         self.samplemd = dict(map(lambda t: (t[0],dict(tisssue=t[1])),zip(self.df.index,self.df['Tissue'])))
 
     def genes(self):
-        return set(self.df.columns)
+        gs = set(self.df.columns)
+        if 'Tissue' in gs:
+             gs.remove('Tissue')
+        return gs
 
     def restrict(self,genes=None,tissue=None,nottissue=None,includetissue=False):
         if includetissue:

@@ -297,25 +297,23 @@ class DistributedProcessing(object):
         return True
 
     def hms(self,seconds,lb=True):
-        s = seconds
+        if lb:
+            s = int(math.floor(seconds))
+        else:
+            s = int(math.ceil(seconds))
         h = int(math.floor(s/3600))
         s -= h*3600
         m = int(math.floor(s/60))
         s -= m*60
-        if lb:
-            s = int(math.floor(s))
-        else:
-            s = int(math.ceil(s))
         return "%d:%02d:%02d"%(h,m,s)
 
     def hm(self,seconds,lb=True):
-        s = seconds
-        h = int(math.floor(s/3600))
-        s -= h*3600
         if lb:
-            m = int(math.floor(s/60))
+           m = int(math.floor(seconds/60))
         else:
-            m = int(math.ceil(s/60))
+           m = int(math.ceil(seconds/60))
+        h = int(math.floor(m/60))
+        m -= h*60
         return "%d:%02d"%(h,m)
 
     def update_progress(self,result):
