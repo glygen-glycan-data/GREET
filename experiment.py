@@ -8,6 +8,9 @@ from sklearn.linear_model import LogisticRegression
 
 from imblearn.under_sampling import RandomUnderSampler
 
+import math
+from scipy.stats import norm, beta
+
 class MLModel(object):
     def __init__(self,name,model,train_downsample=None,test_downsample=None):
         self.model = model
@@ -142,40 +145,101 @@ class RecallAtPrecision(MLScore):
         return 0
 
 class Experiment(object):
-    params = ['stdev_floor','non_glycoenzyme_genesets','replicates']
+    params = ['pval_floor','nonzero_score_count','nonzero_stdev_floor','min_non_glycoenzyme_genesets','max_non_glycoenzyme_genesets','replicates']
     def __init__(self, data, score, **kwargs):
         self.data = data
         self.scorer = score
-        self.minsd = kwargs.get('stdev_floor',0.1)
-        self.nonglycosets = kwargs.get('non_glycoenzyme_genesets',20)
-        self.replicates = kwargs.get('replicates',5)
+        self.minpv = kwargs.get('pval_floor')
+        self.minnzsd = kwargs.get('nonzero_stdev_floor')
+        self.nzsccnt = kwargs.get('nonzero_score_count')
+        self.maxnonglycosets = kwargs.get('max_non_glycoenzyme_genesets')
+        self.minnonglycosets = kwargs.get('min_non_glycoenzyme_genesets')
+        self.replicates = kwargs.get('replicates')
 
-    def zscore(self,x,randobs):
-        std = np.std(randobs)
-        if std < self.minsd:
-            std = self.minsd
-        mean = np.mean(randobs)
-        return max(x-mean,0)/std
+    def do_nullmodel(self,task,**kwargs):
+        ngenes = task['ngenes']
+        samples = task['samples']
+        replicate = task['replicate']
+
+        nzobs = []
+        obs = []
+        for df in self.data.create_random_dataframes(ngenes,samples,self.maxnonglycosets):
+            X = df.drop(['Class'], axis = 1)
+            y = df["Class"]
+            score = self.scorer.score(X,y)
+            obs.append(score)
+            if score > 0:
+                nzobs.append(score)
+                if len(obs) >= self.minnonglycosets and len(nzobs) >= self.nzsccnt:
+                    break
+
+        robust_mean,robust_stdev = self.robust(nzobs)
+
+        if len(obs) == self.maxnonglycosets:
+            pnz = len(nzobs)/len(obs)
+        else:
+            pnz = (len(nzobs)-1)/(len(obs)-1)
+        # bparams = beta.fit(nzobs)
+        # criticalpvals = [ (x,beta.sf(x,*bparams)) for x in (0.5,0.6,0.7,0.8,0.9,0.99) ]
+        nzobs1 = [ min(x,0.99) for x in nzobs ]
+        bparams1 = beta.fit(nzobs1,floc=0,fscale=1)
+        criticalpvals1 = [ (x,beta.sf(x,*bparams1)) for x in (0.5,0.6,0.7,0.8,0.9,0.99) ]
+        row = dict(key=(samples,ngenes),replicate=replicate,
+                   n=len(obs),nnz=len(nzobs),pnz=pnz,mean=np.mean(obs),stdev=np.std(obs),
+                   nzmean=robust_mean,nzstdev=robust_stdev,nzobs=sorted(nzobs),
+                   betaparams=bparams1,cpv=criticalpvals1)
+        return row
+
+    def significance(self,score,ns):
+        if score == 0.0:
+            pval = (1-ns['pnz'])
+            zscore = 0.0
+        else:
+            if score <= ns['nzmean']:
+                zscore = 0
+            else:
+                zscore = (score-ns['nzmean'])/max(ns['nzstdev'],self.minnzsd)
+            pval = ns['pnz']*beta.sf(min(score,0.99),*ns['betaparams'])
+            # pval = ns['pnz']*norm.sf(zscore)
+        val = dict(pval=pval,zscore=zscore)
+        if pval < 1e-10:
+            pval = 1e-10
+        val['neg10logpval'] = abs(-10*math.log(pval,10))
+        return val
+
+    def robust(self,obs):
+        med = np.median(obs)
+        mad = np.median([ abs(x - med) for x in obs ])
+        return med,1.482*mad
 
     def do_analysis(self,task,**kwargs):
         genes = task['geneset']
         samples = task['samples']
+        nullstats = task['nullstats']
 
         rows = []
         for i in range(self.replicates):
-            obs = []
-            for df in self.data.create_dataframes(genes,samples,self.nonglycosets):
-                X = df.drop(['Class'], axis = 1)
-                y = df["Class"]
-                score = self.scorer.score(X,y)
-                obs.append(score)
-            zscore = self.zscore(obs[0],obs[1:])
-            rows.append(dict(geneset_name=task['geneset_name'],genes=",".join(sorted(genes)),topredict=task['topredict'],
-                             replicate=i+1,task_id=kwargs['task_index'],
-                             score=obs[0],zscore=zscore,randscores=obs[1:]))
+            df = self.data.create_genebased_dataframe(genes,samples)
+            X = df.drop(['Class'], axis = 1)
+            y = df["Class"]
+            score = self.scorer.score(X,y)
+            rows.append(dict(ngenes=len(genes),genes=",".join(sorted(genes)),topredict=task['topredict'],
+                             replicate=i+1,task_id=kwargs['task_index'],score=score))
         
-        medianrow = dict(sorted(rows,key=lambda d: d['zscore'])[len(rows)//2].items())
+        medianrow = dict(sorted(rows,key=lambda d: d['score'])[len(rows)//2].items())
         del medianrow['replicate']
-        medianrow['score'] = round(medianrow['score'],3)
-        medianrow['zscore'] = round(medianrow['zscore'],3)
-        return medianrow
+
+        sigs = []
+        for ns in nullstats:
+            sigs.append(self.significance(medianrow['score'],ns))
+        mediansig = sorted(sigs,key=lambda d: (d['pval'],-d['zscore']))[len(sigs)//2]
+        medianrow.update(mediansig)
+        for key in ('score','neg10logpval','zscore'):
+            medianrow[key] = round(medianrow[key],3)
+        for key in ('pval',):
+            medianrow[key] = "%.3g"%(medianrow[key],)
+
+        rows = []
+        for gsn in task['geneset_names']:
+            rows.append(dict(geneset_name=gsn,**medianrow))
+        return rows

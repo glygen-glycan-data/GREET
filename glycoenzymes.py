@@ -7,14 +7,15 @@ class GlycoEnzymes():
 
     sandbox_datafile = "data/sandbox.json"
     
+    GROUP_TREE_MONO_ANOMER_SITE_PARENT = "%(tree)s-%(form_name)s-%(anomer)s-%(site)s-%(parent_form_name)s"
     GROUP_MONO_ANOMER_SITE_PARENT = "%(form_name)s-%(anomer)s-%(site)s-%(parent_form_name)s"
-    GROUP_MONO_ANOMER_PARENT = "%(form_name)s-%(anomer)s-%(parent_form_name)s"
-    GROUP_MONO_SITE_PARENT = "%(form_name)s-%(site)s-%(parent_form_name)s"
-    GROUP_MONO_PARENT = "%(form_name)s-%(parent_form_name)s"
-    GROUP_MONO_ANOMER_SITE = "%(form_name)s-%(anomer)s-%(site)s"
-    GROUP_MONO_ANOMER = "%(form_name)s-%(anomer)s"
-    GROUP_MONO_SITE = "%(form_name)s-%(site)s"
-    GROUP_MONO = "%(form_name)s"
+    # GROUP_MONO_ANOMER_PARENT = "%(form_name)s-%(anomer)s-%(parent_form_name)s"
+    # GROUP_MONO_SITE_PARENT = "%(form_name)s-%(site)s-%(parent_form_name)s"
+    # GROUP_MONO_PARENT = "%(form_name)s-%(parent_form_name)s"
+    # GROUP_MONO_ANOMER_SITE = "%(form_name)s-%(anomer)s-%(site)s"
+    # GROUP_MONO_ANOMER = "%(form_name)s-%(anomer)s"
+    # GROUP_MONO_SITE = "%(form_name)s-%(site)s"
+    # GROUP_MONO = "%(form_name)s"
 
     @staticmethod
     def convert_group(s):
@@ -42,6 +43,10 @@ class GlycoEnzymes():
         Xylp	Xyl
     """.splitlines())))
 
+    def add_tree(self,row):
+        row['tree'] = row['residue_id'][0]
+        return row
+    
     def map_form_names(self,row):
         for fn in ("form_name","parent_form_name"):
             row[fn] = self.form_name_map.get(row[fn],row[fn])
@@ -58,6 +63,7 @@ class GlycoEnzymes():
         self.group2enzymes = defaultdict(set)
         self.groupby = self.convert_group(groupby)
         self.genesets_generators = [ self.genesets_generator_map[gs.strip()] for gs in genesets.split(',') ]
+        self.genesets2names = defaultdict(set)
         self.build()
 
     def build(self):
@@ -71,6 +77,7 @@ class GlycoEnzymes():
             if row['species'] != 'Homo sapiens' or row['gene_name'] == None:
                 continue
             row = self.map_form_names(row)
+            row = self.add_tree(row)
             byid[row['residue_id']].append(dict(row.items()))
             group = self.group(row)
             self.enzyme2group[row['gene_name']] = group
@@ -84,12 +91,19 @@ class GlycoEnzymes():
                     group = self.group(row)
                     pgroup = self.group(prow)
                     self.adjgroups.add((group,pgroup))
+        self.genesets2names = defaultdict(set)
+        for gsname,gs in self.genesets():
+            self.genesets2names[",".join(sorted(gs))].add(gsname)
 
     def all_enzymes(self):
         return list(self.enzyme2group)
 
     def all_groups(self):
         return list(self.group2enzymes)
+
+    def geneset_names(self,geneset):
+        key = ",".join(sorted(geneset))
+        return self.genesets2names[key]
 
     def enzymes_bygroup(self,group):
         return list(self.group2enzymes.get(group,[]))

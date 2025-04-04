@@ -17,20 +17,39 @@ class DataIO(object):
         seen = set()
         for name,geneset in self.enzymes.genesets():
             if len(set(geneset).intersection(self.glyco_genes)) == len(geneset):
-                key = ":".join(sorted(geneset))
+                names = self.enzymes.geneset_names(geneset)
+                key = ",".join(sorted(geneset))
                 if key not in seen:
-                    yield name,geneset
+                    yield names,geneset
                     seen.add(key)
 
     def sample_non_glyco_genes(self,n):
         return random.sample(self.non_glyco_genes,n)
+
+    def create_genebased_dataframe(self,genes,samples):
+        df = self.gene_restricted_df(genes)
+        df['Class'] = 0
+        ind = self.samples_to_index(samples)
+        df.loc[ind,'Class'] = 1
+        return df
+
+    def random_dfs(self,ngenes,randcnt):
+        for i in range(randcnt):
+            yield self.gene_restricted_df(self.sample_non_glyco_genes(ngenes))
+ 
+    def create_random_dataframes(self,ngenes,samples,randcnt):
+        for df in self.random_dfs(ngenes,randcnt):
+            df['Class'] = 0
+            ind = self.samples_to_index(samples)
+            df.loc[ind,'Class'] = 1
+            yield df
 
     def gene_restriction_plus_random_dfs(self,genes,randcnt):
         dfs = [self.gene_restricted_df(genes)]
         for i in range(randcnt):
             dfs.append(self.gene_restricted_df(self.sample_non_glyco_genes(len(genes))))
         return dfs
- 
+
     def create_dataframes(self,genes,samples,randcnt):
         dfs = []
         for df in self.gene_restriction_plus_random_dfs(genes,randcnt):
@@ -51,13 +70,33 @@ class GTExTissueRNASeq(DataIO):
 
         self.sampledf = self.data.df[['Tissue']]
         self.tissues = set()
+        tissues = set()
+        freq = defaultdict(set)
         for t in self.data.tissues:
+            tissues.add(t)
+            if ' - ' not in t:
+                continue
+            base,rest = t.split(' - ',1)
+            freq[base].add(t)
+        for base in freq:
+            if len(freq[base]) > 1:
+                tissues.add(base)
+        for t in tissues:
             ind = self.tissue_toindex(t)
             if sum(ind) >= self.config.min_samples_per_sampletype():
                 self.tissues.add(t)
 
     def tissue_toindex(self,t):
-        return (self.sampledf['Tissue']==t)
+        if ' - ' in t:
+            return (self.sampledf['Tissue']==t)
+        ts = set()
+        for ti in self.data.tissues:
+            if t == ti.split(' - ',1)[0]:
+                ts.add(ti)
+        ind = pd.Series(False,index=self.sampledf.index)
+        for ti in ts:
+            ind = (ind | (self.sampledf['Tissue'] == ti))
+        return ind
             
     def samples_to_index(self,samples):
         return self.tissue_toindex(samples)

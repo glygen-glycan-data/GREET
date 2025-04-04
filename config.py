@@ -35,11 +35,25 @@ class GREETConfig(object):
     def min_samples_per_sampletype(self):
         return self.get_param("Data","min_samples_per_sampletype",float)
 
-    def non_glycoenzyme_genesets(self):
-        return self.get_param("Parameters","non_glycoenzyme_genesets",int)
+    def max_non_glycoenzyme_genesets(self):
+        return self.get_param("Parameters","max_non_glycoenzyme_genesets",int)
     
-    def stdev_floor(self):
-        return self.get_param("Parameters","stdev_floor",float)
+    def min_non_glycoenzyme_genesets(self):
+        return self.get_param("Parameters","min_non_glycoenzyme_genesets",int)
+    
+    def nonzero_score_count(self):
+        return self.get_param("Parameters","nonzero_score_count",float)
+
+    def nonzero_stdev_floor(self):
+        return self.get_param("Parameters","nonzero_stdev_floor",float)
+
+    def pval_floor(self):
+        return self.get_param("Parameters","pval_floor",float)
+
+    def nullmodel_replicates(self):
+        value = self.get_param("Parameters","nullmodel_replicates",int)
+        assert value%2 == 1
+        return value
 
     def replicates(self):
         value = self.get_param("Parameters","replicates",int)

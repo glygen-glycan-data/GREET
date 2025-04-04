@@ -158,8 +158,10 @@ class DistributedProcessing(object):
             return None
 
     def do_task(self,task,**kwargs):
-        if not self.target:
+        if self.target is None:
             raise NotImplemented("Neither target nor derived class do_task method defined.")
+        if '__stage__' in task:
+            return self.target[task['__stage__']](task,**kwargs)
         return self.target(task,**kwargs)
 
     def init(self):
@@ -276,10 +278,17 @@ class DistributedProcessing(object):
         # print(stdinstr%(cmd,))
         subprocess.run(sbatch,input=stdinstr%(cmd,),text=True,check=True,shell=True)
 
-    def execute(self,tasks,workers="",**shared_data):
+    def startup(self,workers="",**shared_data):
         self.shared_data.update(shared_data)
-        self.alltasks = list(tasks)
         self.start_workers(self.procspec(workers))
+        return self
+
+    def execute(self,tasks,noshutdown=False,stage=None):
+        self.alltasks = list(tasks)
+        if stage is not None:
+            for t in self.alltasks:
+                t['__stage__'] = stage
+        self.noshutdown=noshutdown
         return self
 
     def tasksempty(self):
@@ -400,6 +409,10 @@ class DistributedProcessing(object):
         if self.verbose:
             print("Task summary: %s tasks completed, %s tasks failed."%(len(self.donetasks),len(self.failedtasks)),file=sys.stderr)
 
+        if not self.noshutdown:
+            self.allshutdown()
+
+    def allshutdown(self):
         while not self.worker_messages_empty():
             msg = self.worker_messages.get()
             if msg[0] == "WORKERID":
@@ -413,9 +426,8 @@ class DistributedProcessing(object):
         time.sleep(5)
         self.shutdown()
 
-    def serial(self,tasks,**shared_data):
+    def serial(self,**shared_data):
         self.shared_data = shared_data
-        self.alltasks = list(tasks)
         self.iterresults = self.serialiterresults
         return self
 
@@ -457,12 +469,13 @@ class DistributedProcessing(object):
             return None
         return ('manager',distproc)
 
+    logtempl = "worker_id: %(hostname)s:%(worker_index)s task_id: %(task_index)s runtime: %(runtime)s progress: %(progress)s remaining: %(remaining)s"
+
     @staticmethod
-    def process(workers,target,tasks,verbose=False,
-                logtempl="%(hostname)s:%(worker_index)s task: %(task)s"):
+    def process(workers,target,tasks,verbose=False,logtempl=logtempl):
         if workers is None: 
             # serial processing
-            for result in DistributedProcessing(target=target,verbose=verbose).serial(tasks):
+            for result in DistributedProcessing(target=target,verbose=verbose).serial().execute(tasks):
                 if verbose:
                     print(logtempl%result,file=sys.stderr)
                 yield result['result']
@@ -470,9 +483,12 @@ class DistributedProcessing(object):
         elif workers[0] == "manager":
             # manager/server/hostnode
             p = DistributedProcessing(target=target,verbose=verbose).server()
-            for result in p.execute(tasks,workers=workers[1]):
-                if verbose:
+            p.startup(workers=workers[1])
+            nextoutput = time.time()-10
+            for result in p.execute(tasks):
+                if verbose and time.time() > nextoutput:
                     print(logtempl%result,file=sys.stderr)
+                    nextoutput = time.time()+15
                 yield result['result']
 
         elif workers[0] == "worker":
@@ -488,6 +504,31 @@ class DistributedProcessing(object):
             ncpus,server,port,secret = workers[1].split(':')
             DistributedProcessing(target=target,host=server,port=port,secret=secret).client(int(ncpus))
             sys.exit(0)
+
+    @staticmethod
+    def stage_process_init(workers,verbose,targets):
+        if workers is None: 
+            # serial processing
+            return DistributedProcessing(target=targets,verbose=verbose).serial()
+        elif workers[0] == "manager":
+            # manager/server/hostnode
+            return DistributedProcessing(target=targets,verbose=verbose).server().startup(workers[1])
+        elif workers[0] == "worker":
+            # worker
+            ncpus,server,port,secret = workers[1].split(':')
+            DistributedProcessing(target=targets,host=server,port=port,secret=secret).client(int(ncpus))
+            sys.exit(0)
+        
+    def stage_process(self,stage,tasks):
+        nextoutput = time.time()-10
+        for result in self.execute(tasks,noshutdown=True,stage=stage):
+            if self.verbose and time.time() > nextoutput:
+                print(self.logtempl%result,file=sys.stderr)
+                nextoutput = time.time() + 15
+            yield result['result']
+
+    def stage_process_finish(self):
+        self.allshutdown()
                                                                                                          
 def do_task(task,**kwargs):
     # print("Worker %s:%s: Task %s delay %s starting..."%(kwargs.get('hostname'),kwargs.get('worker_index'),
