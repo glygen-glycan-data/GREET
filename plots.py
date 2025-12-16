@@ -1,414 +1,92 @@
-from collections import defaultdict
-from sklearn.metrics import confusion_matrix
+#!/bin/env python3.12
+
+import sys, os
 import pandas as pd
-import matplotlib.pyplot as plt
+
+df = pd.read_csv(sys.argv[1],sep='\t')
+
+import matplotlib
+from matplotlib.pyplot import *
 import seaborn as sns
-import re, csv
-import numpy as np
-import os
 
-class Pre_Recall:
-  def __init__(self, recall, precision, label=None):
-    self.recall = recall
-    self.precision = precision
-    self.label = label
+allsampletypes = set(df['SampleType'])
+celltypes = set(filter(lambda s: s.startswith('Celltype:'),allsampletypes))
+tissues = set(filter(lambda s: s.startswith('Tissue:'),allsampletypes))
+celltypeintissue = allsampletypes.difference(celltypes).difference(tissues)
+celltypesandtissues = celltypes.union(tissues)
+endolymphatic = set(filter(lambda s: 'Endothelial cell (lymphatic)' in s,allsampletypes))
+endovascular = set(filter(lambda s: 'Endothelial cell (vascular)' in s,allsampletypes))
+mucouscell = set(filter(lambda s: 'Esophagus mucosa' in s,allsampletypes))
+# Endothelial cell (lymphatic) in Esophagus muscularis
+endomuscularis = set(filter(lambda s: 'Endothelial cell (lymphatic) in Esophagus muscularis' == s,allsampletypes))
+endomuscularis = set(filter(lambda s: 'Endothelial cell (lymphatic) in Esophagus mucosa' == s,allsampletypes))
 
-  def recall_at(self, recall=0.85):
-    pre_reg = []
-    rec_reg = []
-    reg_set_label = ""
-    for i in range(0, len(self.precision)):
-      if self.precision[i] >= recall:
-        pre_reg.append(self.precision[i])
-        rec_reg.append(self.recall[i])
-        if self.precision[i] != 1.0:
-          reg_set_label = self.label
-    
-    self.precision = pre_reg
-    self.recall = rec_reg
-    self.label = reg_set_label
+def fixcelltype(s):
+    if ' in ' in s:
+        return s.split(' in ')[0]
+    return "All Cell-types"
+ 
 
-  def precision_at(self, precision=0.9):
-    pre_reg = []
-    rec_reg = []
-    for i in range(0, len(self.precision)):
-      if self.precision[i] >= precision:
-        pre_reg.append(self.precision[i])
-        rec_reg.append(self.recall[i])
-
-    self.pre_target = precision
-    last_pre = pre_reg[0]
-    last_re = rec_reg[0]
-
-    if sorted(rec_reg)[-1] > 0.00:
-      self.last_pre = last_pre
-      self.last_re = last_re
-
-
-    return(last_re)
-
-
-
-  def interpolated_precision(self):
-    interp_precision = []
-    max_precision = self.precision[0]
-    for i in range(0, len(self.precision)):
-        if self.precision[i] > max_precision:
-            max_precision = self.precision[i]
-        interp_precision.append(max_precision)
-
-    self.interp_precision = interp_precision
-
-    return interp_precision
-
-  def plot(self, plot_type=["Original", "Interp", "Regularized"]):
-    if plot_type == "Original":
-      plt.plot(self.recall, self.precision,  label=self.label)
-    elif plot_type == 'Interp':
-      plt.plot(self.recall, self.interp_precision, label=self.label)
-    elif plot_type == 'Regularized':
-      if hasattr(self, 'last_pre') and hasattr(self, 'last_re'):
-        plt.plot([self.last_re, self.last_re], [0, self.last_pre], color='lightsteelblue', linestyle='--',linewidth=1.1)
-        plt.axhline(y=self.pre_target, color='lightgrey', linestyle='--', linewidth=1.1)
-        plt.plot(self.recall, self.precision, markevery=25,markersize=9, label=self.label)
-        plt.annotate(self.pre_target, fontweight='light',xy=(0, self.pre_target), xytext=(-50, self.pre_target),
-                     arrowprops=dict(facecolor='black', arrowstyle='->'), textcoords="offset points", ha='left', fontsize=10)
-
-
-
-def monotonic_figure(line, plot_data_dict, plt_show, plt_save, pr_score=1.0):
-  for m_name, v_dic in plot_data_dict.items():
-    plt.figure(figsize=(10, 8), layout='tight')
-    for val in v_dic:
-      for tis, v in val.items():
-        if line == 'Regularized':
-          p = Pre_Recall(v[0], v[1], tis)
-          p.precision_at(pr_score)
-        elif line == 'Original':
-          p = Pre_Recall(v[0], v[1])
-        p.interpolated_precision()
-        p.plot(line)
-
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.title(f'Precision-Recall Curve {m_name}')
-    plt.grid(True)
-    plt.legend(loc='best', bbox_to_anchor=(1.0, 1.0))
-
-    if plt_show == True:
-      plt.show()
-      
-    if plt_save == True:
-      file_name = f"Monethesitic_{line}_{m_name}"
-      directory = f".\\plot_figures\\{line}_Pr_Re Plots\\"
-      os.makedirs(directory, exist_ok=True)
-      plt.savefig(os.path.join(directory, file_name))
-    
-    plt.close()
-
-def tissue_figure(line, plot_data_dict, pre_recall_class,t_name):
-  plt.figure(figsize=(12, 10))
-  for m_name, v_dic in plot_data_dict.items():
-    for val in v_dic:
-      p = pre_recall_class(v_dic[0], v_dic[1], m_name)
-    p.interpolated_precision()
-    p.plot(line)
-  plt.xlabel('Recall')
-  plt.ylabel('Precision')
-  plt.title(f'Precision-Recall Curve {t_name}')
-  plt.grid(True)
-  plt.legend(loc='best', bbox_to_anchor=(1.0, 1.0))
-  #directory = f".\\plot_figures\\{gene_key[0]}\\{line}_Pr_Re Plots\\"
-  #file_name = f"{line}_{t_name}"
-  #os.makedirs(directory, exist_ok=True)
-  #plt.legend(loc='best', bbox_to_anchor=(1.0, 1.0))
-  #plt.savefig(os.path.join(directory, file_name))
-  plt.close()
-
-
-
-class Make_Violin:
-  def __init__(self, data):
-    self.data = data
-
-  def prepare_violin_data(self):
-    vio_data = {}
-    for gn, values in self.data.items():
-      if gn != 'Class':
-        tem_data = defaultdict(list)
-        for tissue_name, val in values.items():
-          tem_data[tissue_name].append(val)
-
-        srt = dict(sorted(tem_data.items()))
-        vio_data[gn] = srt
-    
-    self.data = vio_data
-
-  def violinplot(self):
-    global gene_key
-    sorted_dict = dict(sorted(self.data.items()))
-    plt.figure(figsize=(15, 10))
-    for i, (gn, val) in enumerate(sorted_dict.items(), start=1):
-      gene_key = re.split(r'\d+$', gn)
-      plt.subplot(len(self.data), 1, i)
-      sns.violinplot(val, saturation=0.50, fill=False, inner="quart", density_norm='width')
-      if i < len(self.data):
-        plt.xticks([])
-      else:
-        plt.xticks(rotation=90)
-        plt.xlabel('Tissue')
-
-      plt.ylabel(gn)
-    
-    plt.show()
-    #directory = ".\\plot_figures\\violin_plot\\"
-    #file_name = f"{gene_key[0]}"
-    #os.makedirs(directory, exist_ok=True)
-    #plt.tight_layout()
-    #plt.savefig(os.path.join(directory, file_name))
-    plt.close()
-
-def confusion_table(model_predictions, models_names,  data, tissue_name):
-  m_dic = {}
-  num = 1
-  plt.figure(figsize=(10, 8))
-  for l in model_predictions:
-    CM = confusion_matrix(data, l)
-    TN = CM[0][0]
-    FN = CM[1][0]
-    TP = CM[1][1]
-    FP = CM[0][1]
-    ACC = ((TP+TN)/(TP+FP+FN+TN) * 100)
-    m_dic[num] = [TP, TN, FP, FN, ACC]
-    num +=1
-
-  m_dic = pd.DataFrame(m_dic)
-  m_dic.columns = models_names
-  m_dic = m_dic.transpose()
-  xlabels = ["TP", "TN", "FP", "FN", "ACC"]
-  graph = sns.heatmap(m_dic, xticklabels=xlabels ,cmap = "Blues", annot = True)
-  plt.title(tissue_name)
-  #directory = f".\\plot_figures\\{gene_key[0]}\\Cofusion table\\"
-  #file_name = f"{tissue_name}"
-  #os.makedirs(directory, exist_ok=True)
-  #plt.savefig(os.path.join(directory, file_name))
-  plt.show()
-  plt.close()
-
-def heatmap_class_report(compare_data, t_name):
-  val_lis = []
-  for ml_name, val in compare_data.items():
-      val_lis.append(val)
-
-  name = f"Classification Report {t_name}"
-  Class_name = ["Precision", "Recall", "F1 Score"]
-
-  ax = sns.heatmap(val_lis, xticklabels= Class_name,cmap = "Blues", annot = True)
-  ax.set_yticklabels(compare_data.keys(), rotation='horizontal')
-  plt.title(name)
-  #directory = f".\\plot_figures\\{gene_key[0]}\\Classification Table\\"
-  #file_name = f"heatmap_{t_name}"
-  #os.makedirs(directory, exist_ok=True)
-  #plt.savefig(os.path.join(directory, file_name))
-  plt.show()
-  plt.close()
-
-
-def histogram(data_dict, plt_show, plt_save):
-    plt.figure(figsize=(10, 6))
-    for model_name, val in data_dict.items():
-        sns.histplot(val, bins=35, alpha=0.7, label=model_name, element='poly')
-    plt.title('Histogram of Tissue AUC')
-    plt.xlabel('Tissue AUC Score')
-    plt.ylabel('Frequency')
-    plt.legend()
-    plt.tight_layout()
-    if plt_show == True:
-      plt.show()
-      
-    if plt_save == True:
-      directory = f".\\plot_figures\\{gene_key[0]}\\Histo plots\\"
-      file_name = f"histogram"
-      os.makedirs(directory, exist_ok=True)
-      plt.savefig(os.path.join(directory, file_name))
-    
-    plt.close()
-
-def box_plot(data_dict,plt_show, plt_save):
-    plt.figure(figsize=(10, 6))
-    sns.boxenplot(data_dict, saturation=0.5)
-    plt.title('Models Histogram  AUC')
-    plt.xlabel('Tissue AUC Score')
-    plt.ylabel('Frequency')
-    plt.tight_layout()
-    if plt_show == True:
-      plt.show()
-      
-    if plt_save == True:
-      directory = f".\\plot_figures\\{gene_key[0]}\\Histo plots\\"
-      file_name = f"box_plot"
-      os.makedirs(directory, exist_ok=True)
-      plt.savefig(os.path.join(directory, file_name))
-    
-    plt.close()
-
-
-
-def cdf_plot(data, plt_show, plt_save):
-  plt.figure(figsize=(10, 8))
-  for model_name, au_lis in data.items():
-    au_lis_sorted = np.sort(au_lis)
-    y = np.arange(len(au_lis_sorted)) / float(len(au_lis_sorted))
-    plt.plot(y, au_lis_sorted, marker='o', label=model_name)
-
-  plt.xlabel('Percent')
-  plt.ylabel('Score')
-  plt.title('(CDF) of AUC Scores')
-  plt.grid(True)
-  plt.legend()
-  if plt_show == True:
-    plt.show()
-    plt.close()
-  if plt_save == True:
-    directory = f".\\plot_figures\\{gene_key[0]}\\Histo plots\\"
-    file_name = "CDF"
-    os.makedirs(directory, exist_ok=True)
-    plt.savefig(os.path.join(directory, file_name))
-  
-  plt.close()
-
-
-def z_plot(data, plt_show:bool, plt_save:bool, z_process=False, all_set = False, title = ""):
-  z_sc = []
-  pr_s = []
-  t_label = {}
-  
-  for k_tis, z_pr in data.items():
-    if all_set == True:
-      if z_process == True:
-        for l in z_pr:
-          for tissue, z_pr_value in l.items():
-            z_sc.append(z_pr_value[0])
-            pr_s.append(z_pr_value[1])
-            t_label[z_pr_value] = tissue
-      else:
-        for gn_set, z_pr_value in z_pr.items():
-          z_sc.append(z_pr_value[0][0])
-          pr_s.append(z_pr_value[0][1])
-          t_label[z_pr_value[0]] = gn_set
-    
+def baseplot(df,gene,sampletypes,sortkey='SampleType',sortasc=True,hidexticks=False):
+    df1 = df
+    df1 = df1[df1['Genes'] == gene]
+    df1 = df1[df1['SampleType'].isin(sampletypes)]
+    df1 = df1.drop(columns=['GeneSet'])
+    df1 = df1.drop_duplicates()
+    df1 = df1.sort_values([sortkey],ascending=sortasc)
+    # df1['SampleType'] = [ s.split(':',1)[-1] for s in df1['SampleType'] ]
+    df1['SampleType'] = [ fixcelltype(s) for s in df1['SampleType'] ]
+    df1['Recall'] = 100*df1['Recall']
+    fig, ax1 = subplots()
+    h1 = ax1.bar(df1['SampleType'], df1['Neg10LogPVal'],label='-10log10(p-Value)')
+    h2 = ax1.plot(df1['SampleType'], df1['Recall'], 'o', color="red",label='% Recall')
+    h3 = ax1.plot([-1,len(df1['SampleType'])],[50,50], 'g--', )
+    axis('tight')
+    ax1.set_ylim([0,100])
+    # legend(loc='best')
+    if not hidexticks:
+        for tick in ax1.get_xticklabels():
+            tick.set_rotation(90)
+        subplots_adjust(bottom=0.5)
     else:
-      z_sc.append(z_pr[0][0])
-      pr_s.append(z_pr[0][1])
-      t_label[z_pr[0]] = k_tis
+        xticks([])
+    show()
 
-  plt.figure(figsize=(12, 10))
-  plt.scatter(z_sc, pr_s)
+def fixgenes(s,focus):
+    gs = s.split(',')
+    if len(gs) == 1:
+        return gs[0] + " Alone"
+    gs.remove(focus)
+    if gs[0].startswith('ST6GALNAC'):
+        return "XXXXX"
+    return "w/ "+gs[0]
 
-  for x,y in zip(z_sc, pr_s):
-    if x > 4 and y > 0.5:
-      label = t_label.get((x,y))
-      plt.annotate(label, (x,y), textcoords="offset points", xytext=(0,10), ha='center')
-      #if all_set == True:
-      #  print(k_tis[1])
-      #  plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0))
-    elif x == 5:
-      label = t_label.get((x,y))
-      plt.annotate((label, "5"), (x,y), textcoords="offset points", xytext=(0,10), ha='center')
-        
-
-  plt.xlabel("Z-Score")
-  plt.ylabel("Recall")
-  plt.grid()
-  if title != "":
-    plt.title(title)
-  if plt_show == True:
-    plt.show()
-  if plt_save == True:
-    directory = f".\\plot_figures\\Z_plots\\"
-    if all_set == True:
-      file_name = "Combine_zscore"
+def otherplot(df,focus,sampletypes,sortkey,sortasc=True,hideticks=False):
+    df1 = df
+    genes = [ g for g in set(df1['Genes']) if focus in g.split(',') ]
+    df1 = df1[df1['Genes'].isin(genes)]
+    df1 = df1[df1['SampleType'].isin(sampletypes)]
+    df1 = df1.drop(columns=['GeneSet'])
+    df1 = df1.drop_duplicates()
+    df1 = df1.sort_values([sortkey],ascending=sortasc)
+    df1['Genes'] = [ fixgenes(s,focus) for s in df1['Genes'] ]
+    df1 = df1[df1['Genes'] != 'XXXXX']
+    df1['Recall'] = 100*df1['Recall']
+    fig, ax1 = subplots()
+    h1 = ax1.bar(df1['Genes'], df1['Neg10LogPVal'],label='-10log10(p-Value)')
+    h2 = ax1.plot(df1['Genes'], df1['Recall'], 'o', color="red",label='% Recall')
+    h3 = ax1.plot([-1,len(df1['SampleType'])],[50,50], 'g--', )
+    ax1.set_ylim([0,100])
+    if not hideticks:
+        for tick in ax1.get_xticklabels():
+            tick.set_rotation(90)
+        subplots_adjust(bottom=0.5)
     else:
-      file_name = f"{title}"
+        xticks([])
+    show()
 
-    os.makedirs(directory, exist_ok=True)
-    plt.savefig(os.path.join(directory, file_name))
-  
-  plt.close()
-
-def z_table(data, z_processing=True, plt_show=False, plt_save=False):
-  restricted_zlabels = defaultdict(list)
-  i = 1
-  for k_tis, z_pr in data.items():
-    if z_processing == True:
-      for l in z_pr:
-        for tissue, z_pr_value in l.items():
-          z_x = z_pr_value[0]
-          recal_y = z_pr_value[1]
-          if z_x > 4 and recal_y > 0.5:
-            if (k_tis[0], i) in restricted_zlabels.keys():
-              i += 1 
-            else:
-              i = 1  
-            
-            restricted_zlabels[k_tis[0], i] = [k_tis[1], tissue, z_x, recal_y]
-    else:
-      for tissue, z_pr_value in z_pr.items():
-        z_x = z_pr_value[0][0]
-        recal_y = z_pr_value[0][1]
-        if z_x > 4 and recal_y > 0.5:
-          restricted_zlabels[k_tis[0]] = [k_tis[1], tissue, z_x, recal_y]
-  
-  restricted_zlabels = pd.DataFrame(restricted_zlabels)
-  restricted_zlabels.columns = restricted_zlabels.keys()
-  restricted_zlabels = restricted_zlabels.transpose()
-  columns = ["Genes", "Tissue", "Z-Score", "Recall-Score"]
-  restricted_zlabels.columns = columns
-  restricted_zlabels = restricted_zlabels.sort_values(by=["Tissue"])
-  print(restricted_zlabels)
-  
-
-
-def save_zdata(data,exp_num,  delimiter='\t'):
-  filename = f"z_table_csv_{exp_num}.tsv"
-  full_path = os.path.join("data/" + filename)
-  with open(full_path, 'w', newline='') as csvfile:
-    writer = csv.writer(csvfile, delimiter=delimiter)
-    head = ["Group Name", "Gene", "Tissue", "Z Score", "Real Set Recall","Mean",  "SD", "Old SD"] + [f"Set {i + 1}" for i in range(20)]
-    writer.writerow(head)
-    for k_tis, z_pr in data.items():
-      for tissue, z_pr_value in z_pr.items():
-        for values in z_pr_value.values():
-          z_x = values[0][0]
-          recal_y = values[0][1]
-          mean = values[0][2]
-          std = values[0][3]
-          old_sd = values[0][4]
-          other_recall = values[0][5]
-          writer.writerow([k_tis[0], k_tis[1], tissue, z_x, recal_y, mean, std, old_sd] + [value for value in other_recall])
-
-def combine_zdata_plots(data1, data2):
-  plt.figure(figsize=(12, 10))
-  z_sc = []
-  pr_s = []
-  t_label = {}
-  for gn_set, z_pr in data1.items():  
-    for gn_set, z_pr_value in z_pr.items():
-      z_sc.append(z_pr_value[0][0])
-      pr_s.append(z_pr_value[0][1])
-      t_label[z_pr_value[0]] = gn_set
-
-  plt.scatter(z_sc, pr_s, color="Red")
-
-  z_sc = []
-  pr_s = []
-  t_label = {}
-  for gn_set, z_pr in data2.items():
-      for l in z_pr:
-        for tissue, z_pr_value in l.items():
-          z_sc.append(z_pr_value[0])
-          pr_s.append(z_pr_value[1])
-          t_label[z_pr_value] = tissue
-  
-  plt.scatter(z_sc, pr_s, color="Blue")
-  
+gene = 'ST6GALNAC3'
+otherplot(df,gene,endomuscularis,'Neg10LogPVal',False)
+# baseplot(df,gene,celltypesandtissues)
+# baseplot(df,gene,celltypeintissue,'Neg10LogPVal',False,True)
+# baseplot(df,gene,mucouscell,'Neg10LogPVal',False)

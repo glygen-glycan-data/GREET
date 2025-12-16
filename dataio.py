@@ -169,3 +169,28 @@ class GTExCelltypeSCRNASeq(DataIO):
                                                index=self.data.obs_names,
                                                columns=self.data.var_names[colind])
         return df
+
+class GTExCelltypeSCRNASeqThreshold(GTExCelltypeSCRNASeq):
+
+    def __init__(self,*args,**kwargs):
+        self.threshold = kwargs.get('threshold',0)
+        if 'threshold' in kwargs:
+            del kwargs['threshold']
+        self.mode = kwargs.get('mode','GT')
+        if 'mode' in kwargs:
+            del kwargs['mode']
+        assert self.mode in ('GE','GT')
+        super().__init__(*args,**kwargs)
+
+    def transform(self,df):
+        df1 = df.copy()
+        if mode == "GT":
+            ind = (df1 > self.threshold)
+        elif mode == "GE":
+            ind = (df1 >= self.threshold)
+        df1[ind] = 1
+        df1[~ind] = 0
+        return df1
+
+    def gene_restricted_df(self,genes):
+        return self.transform(super().gene_restricted_df(genes))

@@ -1,6 +1,7 @@
 
 import json, re
 from collections import defaultdict
+from itertools import product
 
 
 class GlycoEnzymes():
@@ -203,6 +204,27 @@ class GlycoEnzymes():
                     enzs = set([gn1,gn2])
                     yield "<-".join([grp1,grp2]),enzs
 
+    def sialyl_lewis_x(self):
+        groups = """
+           Fuc-a-3-GlcNAc
+           Gal-b-4-GlcNAc
+           NeuAc-a-3-Gal
+        """.split()
+        enzymes = [ self.enzymes_bygroup(g) for g in groups ]
+        for t in product(*enzymes):
+            yield "Sialyl Lewis x",set(t)
+
+    def all_sialyl_lewis_x(self):
+        groups = """
+           Fuc-a-3-GlcNAc
+           Gal-b-4-GlcNAc
+           NeuAc-a-3-Gal
+        """.split()
+        enzymes = []
+        for g in groups:
+            enzymes.extend(self.enzymes_bygroup(g))
+        yield "All Sialyl Lewis x",set(enzymes)
+
     genesets_generator_map = dict(
         SINGLETONS = singletons,
         NONGROUPPAIRS = nongrouppairs,
@@ -210,8 +232,9 @@ class GlycoEnzymes():
         GROUPPAIRS = grouppairs,
         PAIRS = pairs,
         BYGROUP = groupsets,
+        SIALYL_LEWIS_X = sialyl_lewis_x,
+        ALL_SIALYL_LEWIS_X = all_sialyl_lewis_x
     )
-
 
 if __name__ == "__main__":
     ge = GlycoEnzymes("data/sandbox.json","GROUP_MONO_ANOMER_SITE_PARENT","BYGROUP")

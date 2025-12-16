@@ -7,6 +7,7 @@ from experiment import *
 class GREETConfig(object):
     GTEX_TISSUE_RNASEQ = 1
     GTEX_CELLTYPE_SCRNASEQ = 2
+    GTEX_CELLTYPE_SCRNASEQ_THR = 3
 
     def __init__(self,config_file):
         self.config = configparser.ConfigParser()
@@ -14,7 +15,7 @@ class GREETConfig(object):
 
     @staticmethod
     def convert_exp_type(s):
-        assert s in ("GTEX_TISSUE_RNASEQ","GTEX_CELLTYPE_SCRNASEQ"), "Experiment type %s not valid"%(s,)
+        assert s in ("GTEX_TISSUE_RNASEQ","GTEX_CELLTYPE_SCRNASEQ","GTEX_CELLTYPE_SCRNASEQ_THR"), "Experiment type %s not valid"%(s,)
         return getattr(GREETConfig,s)
 
     def get_param(self,section,param,conversion=str):
@@ -94,6 +95,8 @@ class GREETConfig(object):
             dataio = GTExTissueRNASeq(self)
         elif self.experiment_type() == self.GTEX_CELLTYPE_SCRNASEQ:
             dataio = GTExCelltypeSCRNASeq(self)
+        elif self.experiment_type() == self.GTEX_CELLTYPE_SCRNASEQ_THR:
+            dataio = GTExCelltypeSCRNASeqThreshold(self)
         else:
             raise LookupError("Bad experiment type")
         dataio.read(datafile)
